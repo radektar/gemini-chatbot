@@ -1,0 +1,137 @@
+"use server";
+
+import { WebClient } from "@slack/web-api";
+
+const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
+
+if (!SLACK_BOT_TOKEN) {
+  console.warn("SLACK_BOT_TOKEN is not set. Slack integration will not work.");
+}
+
+let slackClient: WebClient | null = null;
+
+function getSlackClient(): WebClient {
+  if (!SLACK_BOT_TOKEN) {
+    throw new Error("SLACK_BOT_TOKEN is not configured");
+  }
+
+  if (!slackClient) {
+    slackClient = new WebClient(SLACK_BOT_TOKEN);
+  }
+
+  return slackClient;
+}
+
+export interface SlackChannel {
+  id: string;
+  name: string;
+  is_private: boolean;
+  is_archived: boolean;
+}
+
+export interface SlackMessage {
+  ts: string;
+  user?: string;
+  text: string;
+  thread_ts?: string;
+  reply_count?: number;
+}
+
+export async function getChannels(): Promise<SlackChannel[]> {
+  try {
+    const client = getSlackClient();
+    const result = await client.conversations.list({
+      types: "public_channel,private_channel",
+      exclude_archived: true,
+    });
+
+    if (!result.ok || !result.channels) {
+      throw new Error(result.error || "Failed to fetch channels");
+    }
+
+    return result.channels.map((channel) => ({
+      id: channel.id!,
+      name: channel.name || "",
+      is_private: channel.is_private || false,
+      is_archived: channel.is_archived || false,
+    }));
+  } catch (error) {
+    console.error("Error fetching Slack channels:", error);
+    throw error;
+  }
+}
+
+export async function getChannelHistory(
+  channelId: string,
+  oldest?: string,
+  limit: number = 200,
+): Promise<SlackMessage[]> {
+  try {
+    const client = getSlackClient();
+    const result = await client.conversations.history({
+      channel: channelId,
+      oldest,
+      limit,
+    });
+
+    if (!result.ok || !result.messages) {
+      throw new Error(result.error || "Failed to fetch channel history");
+    }
+
+    return result.messages.map((msg) => ({
+      ts: msg.ts!,
+      user: msg.user,
+      text: msg.text || "",
+      thread_ts: msg.thread_ts,
+      reply_count: msg.reply_count,
+    }));
+  } catch (error) {
+    console.error(`Error fetching history for channel ${channelId}:`, error);
+    throw error;
+  }
+}
+
+export async function getAllChannelHistory(
+  channelId: string,
+): Promise<SlackMessage[]> {
+  const allMessages: SlackMessage[] = [];
+  let cursor: string | undefined;
+  let oldest: string | undefined;
+
+  do {
+    try {
+      const client = getSlackClient();
+      const result = await client.conversations.history({
+        channel: channelId,
+        oldest,
+        cursor,
+        limit: 200,
+      });
+
+      if (!result.ok || !result.messages) {
+        throw new Error(result.error || "Failed to fetch channel history");
+      }
+
+      allMessages.push(...result.messages.map((msg) => ({
+        ts: msg.ts!,
+        user: msg.user,
+        text: msg.text || "",
+        thread_ts: msg.thread_ts,
+        reply_count: msg.reply_count,
+      })));
+
+      cursor = result.response_metadata?.next_cursor;
+      
+      // Set oldest to the oldest message timestamp for next iteration
+      if (result.messages.length > 0) {
+        oldest = result.messages[result.messages.length - 1].ts;
+      }
+    } catch (error) {
+      console.error(`Error fetching history for channel ${channelId}:`, error);
+      throw error;
+    }
+  } while (cursor);
+
+  return allMessages;
+}
+

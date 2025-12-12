@@ -8,13 +8,10 @@ import { Streamdown } from "streamdown";
 import { BotIcon, UserIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
 import { Weather } from "./weather";
-import { AuthorizePayment } from "../flights/authorize-payment";
-import { DisplayBoardingPass } from "../flights/boarding-pass";
-import { CreateReservation } from "../flights/create-reservation";
-import { FlightStatus } from "../flights/flight-status";
-import { ListFlights } from "../flights/list-flights";
-import { SelectSeats } from "../flights/select-seats";
-import { VerifyPayment } from "../flights/verify-payment";
+import { MondayBoard } from "../tools/monday-board";
+import { MondayTask } from "../tools/monday-task";
+import { SlackChannels } from "../tools/slack-channels";
+import { SlackMessages } from "../tools/slack-messages";
 
 export const Message = ({
   chatId,
@@ -58,24 +55,20 @@ export const Message = ({
                   <div key={toolCallId}>
                     {toolName === "getWeather" ? (
                       <Weather weatherAtLocation={result} />
-                    ) : toolName === "displayFlightStatus" ? (
-                      <FlightStatus flightStatus={result} />
-                    ) : toolName === "searchFlights" ? (
-                      <ListFlights chatId={chatId} results={result} />
-                    ) : toolName === "selectSeats" ? (
-                      <SelectSeats chatId={chatId} availability={result} />
-                    ) : toolName === "createReservation" ? (
-                      Object.keys(result).includes("error") ? null : (
-                        <CreateReservation reservation={result} />
-                      )
-                    ) : toolName === "authorizePayment" ? (
-                      <AuthorizePayment intent={result} />
-                    ) : toolName === "displayBoardingPass" ? (
-                      <DisplayBoardingPass boardingPass={result} />
-                    ) : toolName === "verifyPayment" ? (
-                      <VerifyPayment result={result} />
+                    ) : toolName === "list_boards" || toolName === "listMondayBoards" ? (
+                      <MondayBoard result={result} />
+                    ) : toolName === "get_board_items" || toolName === "get_item_details" || toolName === "getMondayTasks" || toolName === "getMondayTaskDetails" ? (
+                      <MondayTask result={result} />
+                    ) : toolName === "searchSlackHistory" ? (
+                      <SlackMessages result={result} />
+                    ) : toolName === "getSlackChannels" ? (
+                      <SlackChannels result={result} />
                     ) : (
-                      <div>{JSON.stringify(result, null, 2)}</div>
+                      <div className="bg-card rounded-lg p-4 border">
+                        <pre className="text-sm overflow-auto">
+                          {JSON.stringify(result, null, 2)}
+                        </pre>
+                      </div>
                     )}
                   </div>
                 );
@@ -84,19 +77,17 @@ export const Message = ({
                   <div key={toolCallId} className="skeleton">
                     {toolName === "getWeather" ? (
                       <Weather />
-                    ) : toolName === "displayFlightStatus" ? (
-                      <FlightStatus />
-                    ) : toolName === "searchFlights" ? (
-                      <ListFlights chatId={chatId} />
-                    ) : toolName === "selectSeats" ? (
-                      <SelectSeats chatId={chatId} />
-                    ) : toolName === "createReservation" ? (
-                      <CreateReservation />
-                    ) : toolName === "authorizePayment" ? (
-                      <AuthorizePayment />
-                    ) : toolName === "displayBoardingPass" ? (
-                      <DisplayBoardingPass />
-                    ) : null}
+                    ) : toolName === "list_boards" || toolName === "listMondayBoards" ? (
+                      <MondayBoard result={{ boards: [] }} />
+                    ) : toolName === "get_board_items" || toolName === "get_item_details" || toolName === "getMondayTasks" || toolName === "getMondayTaskDetails" ? (
+                      <MondayTask result={{ tasks: [] }} />
+                    ) : toolName === "searchSlackHistory" ? (
+                      <SlackMessages result={{ results: [] }} />
+                    ) : toolName === "getSlackChannels" ? (
+                      <SlackChannels result={{ channels: [] }} />
+                    ) : (
+                      <div className="bg-muted rounded-lg p-4 h-20 animate-pulse" />
+                    )}
                   </div>
                 );
               }

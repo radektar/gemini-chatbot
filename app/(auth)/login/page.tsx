@@ -1,40 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 
-import { AuthForm } from "@/components/custom/auth-form";
-import { SubmitButton } from "@/components/custom/submit-button";
+import { Button } from "@/components/ui/button";
 
 import { login, LoginActionState } from "../actions";
 
 export default function Page() {
   const router = useRouter();
 
-  const [email, setEmail] = useState("");
-
-  const [state, formAction] = useActionState<LoginActionState, FormData>(
-    login,
-    {
-      status: "idle",
-    },
-  );
-
-  useEffect(() => {
-    if (state.status === "failed") {
-      toast.error("Invalid credentials!");
-    } else if (state.status === "invalid_data") {
-      toast.error("Failed validating your submission!");
-    } else if (state.status === "success") {
-      router.refresh();
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await login();
+      if (result.status === "failed") {
+        toast.error("Failed to sign in with Google");
+      }
+    } catch (error) {
+      toast.error("An error occurred during sign in");
     }
-  }, [state.status, router]);
-
-  const handleSubmit = (formData: FormData) => {
-    setEmail(formData.get("email") as string);
-    formAction(formData);
   };
 
   return (
@@ -43,22 +28,33 @@ export default function Page() {
         <div className="flex flex-col items-center justify-center gap-2 px-4 text-center sm:px-16">
           <h3 className="text-xl font-semibold dark:text-zinc-50">Sign In</h3>
           <p className="text-sm text-gray-500 dark:text-zinc-400">
-            Use your email and password to sign in
+            Sign in with your Google Workspace account
           </p>
         </div>
-        <AuthForm action={handleSubmit} defaultEmail={email}>
-          <SubmitButton>Sign in</SubmitButton>
-          <p className="text-center text-sm text-gray-600 mt-4 dark:text-zinc-400">
-            {"Don't have an account? "}
-            <Link
-              href="/register"
-              className="font-semibold text-gray-800 hover:underline dark:text-zinc-200"
+        <div className="flex flex-col gap-4 px-4 sm:px-16">
+          <Button
+            onClick={handleGoogleSignIn}
+            className="w-full bg-white text-gray-900 hover:bg-gray-100 border border-gray-300 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700 dark:border-gray-600"
+            type="button"
+          >
+            <svg
+              className="mr-2 size-5"
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fab"
+              data-icon="google"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 488 512"
             >
-              Sign up
-            </Link>
-            {" for free."}
-          </p>
-        </AuthForm>
+              <path
+                fill="currentColor"
+                d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z"
+              ></path>
+            </svg>
+            Sign in with Google
+          </Button>
+        </div>
       </div>
     </div>
   );

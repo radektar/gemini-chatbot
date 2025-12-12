@@ -1,9 +1,11 @@
-import NextAuth from "next-auth";
+// PoC: Bypass authentication - all requests pass through
+// For production, restore NextAuth middleware
 
-import { authConfig } from "@/app/(auth)/auth.config";
-
-export default NextAuth(authConfig).auth;
+export default function middleware() {
+  // Pass through all requests without authentication check
+  return;
+}
 
 export const config = {
-  matcher: ["/", "/:id", "/api/:path*", "/login", "/register"],
+  matcher: [], // Don't match any routes - bypass all middleware
 };

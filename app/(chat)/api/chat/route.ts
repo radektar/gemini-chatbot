@@ -2,57 +2,124 @@ import { convertToCoreMessages, Message, streamText } from "ai";
 import { z } from "zod";
 
 import { geminiProModel } from "@/ai";
-import {
-  generateReservationPrice,
-  generateSampleFlightSearchResults,
-  generateSampleFlightStatus,
-  generateSampleSeatSelection,
-} from "@/ai/actions";
-import { auth } from "@/app/(auth)/auth";
-import {
-  createReservation,
-  deleteChatById,
-  getChatById,
-  getReservationById,
-  saveChat,
-} from "@/db/queries";
-import { generateUUID } from "@/lib/utils";
+import { getMondayMCPTools, callMondayMCPTool } from "@/integrations/mcp/init";
+
+// PoC: Auth removed
+// import { auth } from "@/app/(auth)/auth";
+// PoC: DB queries removed
+// import { deleteChatById, getChatById, saveChat } from "@/db/queries";
+// PoC: Slack integration removed
+// import { slackTools } from "@/integrations";
 
 export async function POST(request: Request) {
   const { id, messages }: { id: string; messages: Array<Message> } =
     await request.json();
 
-  const session = await auth();
-
-  if (!session) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  // PoC: Skip authentication check
+  // const session = await auth();
+  // if (!session) {
+  //   return new Response("Unauthorized", { status: 401 });
+  // }
 
   const coreMessages = convertToCoreMessages(messages).filter(
     (message) => message.content.length > 0,
   );
 
+  // Get Monday.com MCP tools
+  let mondayToolsForAI: Record<string, any> = {};
+  
+  try {
+    const mcpTools = await getMondayMCPTools();
+    
+    // Convert MCP tools to AI SDK format
+    for (const tool of mcpTools) {
+      // MCP tools have structure: { name, description, inputSchema }
+      const inputSchema = tool.inputSchema || {};
+      const properties = inputSchema.properties || {};
+      
+      // Build Zod schema from MCP input schema
+      const zodProperties: Record<string, z.ZodTypeAny> = {};
+      const required = inputSchema.required || [];
+      
+      for (const [key, value] of Object.entries(properties)) {
+        const prop = value as any;
+        let zodType: z.ZodTypeAny;
+        
+        if (prop.type === "string") {
+          zodType = z.string();
+        } else if (prop.type === "number" || prop.type === "integer") {
+          zodType = z.number();
+        } else if (prop.type === "boolean") {
+          zodType = z.boolean();
+        } else if (prop.type === "array") {
+          // Google Gemini requires proper items type for arrays
+          // Check if MCP schema provides items type, otherwise default to string
+          const itemsType = prop.items?.type;
+          if (itemsType === "number" || itemsType === "integer") {
+            zodType = z.array(z.number());
+          } else if (itemsType === "boolean") {
+            zodType = z.array(z.boolean());
+          } else if (itemsType === "object") {
+            zodType = z.array(z.record(z.string(), z.unknown()));
+          } else {
+            // Default to string array (most common and safest)
+            zodType = z.array(z.string());
+          }
+        } else if (prop.type === "object") {
+          zodType = z.record(z.string(), z.unknown());
+        } else {
+          // For unknown types, use string as the safest default
+          zodType = z.string();
+        }
+        
+        if (prop.description) {
+          zodType = zodType.describe(prop.description);
+        }
+        
+        if (!required.includes(key)) {
+          zodType = zodType.optional();
+        }
+        
+        zodProperties[key] = zodType;
+      }
+      
+      mondayToolsForAI[tool.name] = {
+        description: tool.description || tool.name,
+        parameters: z.object(zodProperties),
+        execute: async (args: Record<string, any>) => {
+          try {
+            const result = await callMondayMCPTool(tool.name, args);
+            // Result is already processed by MCP client
+            return result;
+          } catch (error) {
+            return {
+              error: error instanceof Error ? error.message : "Failed to execute tool",
+            };
+          }
+        },
+      };
+    }
+  } catch (error) {
+    console.error("Failed to load Monday.com MCP tools:", error);
+    // Fallback: use empty tools object, will log error but won't crash
+  }
+
   const result = await streamText({
     model: geminiProModel,
-    system: `\n
-        - you help users book flights!
-        - keep your responses limited to a sentence.
-        - DO NOT output lists.
-        - after every tool call, pretend you're showing the result to the user and keep your response limited to a phrase.
-        - today's date is ${new Date().toLocaleDateString()}.
-        - ask follow up questions to nudge user into the optimal flow
-        - ask for any details you don't know, like name of passenger, etc.'
-        - C and D are aisle seats, A and F are window seats, B and E are middle seats
-        - assume the most popular airports for the origin and destination
-        - here's the optimal flow
-          - search for flights
-          - choose flight
-          - select seats
-          - create reservation (ask user whether to proceed with payment or change reservation)
-          - authorize payment (requires user consent, wait for user to finish payment and let you know when done)
-          - display boarding pass (DO NOT display boarding pass without verifying payment)
-        '
-      `,
+    system: `
+      Jesteś asystentem organizacyjnym. Pomagasz pracownikom w:
+      - Przeglądaniu zadań z Monday.com (używając MCP - TYLKO ODCZYT)
+      
+      WAŻNE: Integracja z Monday.com jest TYLKO DO ODCZYTU. 
+      Nie możesz tworzyć, modyfikować ani usuwać danych w Monday.com.
+      Jeśli użytkownik prosi o zmiany, wyjaśnij że dostęp jest tylko do odczytu.
+      
+      PoC: Dostęp ograniczony do boardu ID 5088645756 (konto testowe).
+      
+      Dzisiejsza data: ${new Date().toLocaleDateString('pl-PL')}.
+      
+      Odpowiadaj zwięźle i konkretnie. Używaj narzędzi, gdy użytkownik prosi o dostęp do danych z Monday.
+    `,
     messages: coreMessages,
     tools: {
       getWeather: {
@@ -70,173 +137,35 @@ export async function POST(request: Request) {
           return weatherData;
         },
       },
-      displayFlightStatus: {
-        description: "Display the status of a flight",
-        parameters: z.object({
-          flightNumber: z.string().describe("Flight number"),
-          date: z.string().describe("Date of the flight"),
-        }),
-        execute: async ({ flightNumber, date }) => {
-          const flightStatus = await generateSampleFlightStatus({
-            flightNumber,
-            date,
-          });
-
-          return flightStatus;
-        },
-      },
-      searchFlights: {
-        description: "Search for flights based on the given parameters",
-        parameters: z.object({
-          origin: z.string().describe("Origin airport or city"),
-          destination: z.string().describe("Destination airport or city"),
-        }),
-        execute: async ({ origin, destination }) => {
-          const results = await generateSampleFlightSearchResults({
-            origin,
-            destination,
-          });
-
-          return results;
-        },
-      },
-      selectSeats: {
-        description: "Select seats for a flight",
-        parameters: z.object({
-          flightNumber: z.string().describe("Flight number"),
-        }),
-        execute: async ({ flightNumber }) => {
-          const seats = await generateSampleSeatSelection({ flightNumber });
-          return seats;
-        },
-      },
-      createReservation: {
-        description: "Display pending reservation details",
-        parameters: z.object({
-          seats: z.string().array().describe("Array of selected seat numbers"),
-          flightNumber: z.string().describe("Flight number"),
-          departure: z.object({
-            cityName: z.string().describe("Name of the departure city"),
-            airportCode: z.string().describe("Code of the departure airport"),
-            timestamp: z.string().describe("ISO 8601 date of departure"),
-            gate: z.string().describe("Departure gate"),
-            terminal: z.string().describe("Departure terminal"),
-          }),
-          arrival: z.object({
-            cityName: z.string().describe("Name of the arrival city"),
-            airportCode: z.string().describe("Code of the arrival airport"),
-            timestamp: z.string().describe("ISO 8601 date of arrival"),
-            gate: z.string().describe("Arrival gate"),
-            terminal: z.string().describe("Arrival terminal"),
-          }),
-          passengerName: z.string().describe("Name of the passenger"),
-        }),
-        execute: async (props) => {
-          const { totalPriceInUSD } = await generateReservationPrice(props);
-          const session = await auth();
-
-          const id = generateUUID();
-
-          if (session && session.user && session.user.id) {
-            await createReservation({
-              id,
-              userId: session.user.id,
-              details: { ...props, totalPriceInUSD },
-            });
-
-            return { id, ...props, totalPriceInUSD };
-          } else {
-            return {
-              error: "User is not signed in to perform this action!",
-            };
-          }
-        },
-      },
-      authorizePayment: {
-        description:
-          "User will enter credentials to authorize payment, wait for user to repond when they are done",
-        parameters: z.object({
-          reservationId: z
-            .string()
-            .describe("Unique identifier for the reservation"),
-        }),
-        execute: async ({ reservationId }) => {
-          return { reservationId };
-        },
-      },
-      verifyPayment: {
-        description: "Verify payment status",
-        parameters: z.object({
-          reservationId: z
-            .string()
-            .describe("Unique identifier for the reservation"),
-        }),
-        execute: async ({ reservationId }) => {
-          const reservation = await getReservationById({ id: reservationId });
-
-          if (reservation.hasCompletedPayment) {
-            return { hasCompletedPayment: true };
-          } else {
-            return { hasCompletedPayment: false };
-          }
-        },
-      },
-      displayBoardingPass: {
-        description: "Display a boarding pass",
-        parameters: z.object({
-          reservationId: z
-            .string()
-            .describe("Unique identifier for the reservation"),
-          passengerName: z
-            .string()
-            .describe("Name of the passenger, in title case"),
-          flightNumber: z.string().describe("Flight number"),
-          seat: z.string().describe("Seat number"),
-          departure: z.object({
-            cityName: z.string().describe("Name of the departure city"),
-            airportCode: z.string().describe("Code of the departure airport"),
-            airportName: z.string().describe("Name of the departure airport"),
-            timestamp: z.string().describe("ISO 8601 date of departure"),
-            terminal: z.string().describe("Departure terminal"),
-            gate: z.string().describe("Departure gate"),
-          }),
-          arrival: z.object({
-            cityName: z.string().describe("Name of the arrival city"),
-            airportCode: z.string().describe("Code of the arrival airport"),
-            airportName: z.string().describe("Name of the arrival airport"),
-            timestamp: z.string().describe("ISO 8601 date of arrival"),
-            terminal: z.string().describe("Arrival terminal"),
-            gate: z.string().describe("Arrival gate"),
-          }),
-        }),
-        execute: async (boardingPass) => {
-          return boardingPass;
-        },
-      },
+      ...mondayToolsForAI,
+      // PoC: Slack integration removed
+      // ...slackTools,
     },
-    onFinish: async ({ responseMessages }) => {
-      if (session.user && session.user.id) {
-        try {
-          await saveChat({
-            id,
-            messages: [...coreMessages, ...responseMessages],
-            userId: session.user.id,
-          });
-        } catch (error) {
-          console.error("Failed to save chat");
-        }
-      }
-    },
+    // PoC: Skip saving to database
+    // onFinish: async ({ responseMessages }) => {
+    //   if (session.user && session.user.id) {
+    //     try {
+    //       await saveChat({
+    //         id,
+    //         messages: [...coreMessages, ...responseMessages],
+    //         userId: session.user.id,
+    //       });
+    //     } catch (error) {
+    //       console.error("Failed to save chat");
+    //     }
+    //   }
+    // },
     experimental_telemetry: {
       isEnabled: true,
       functionId: "stream-text",
     },
   });
 
-  return result.toDataStreamResponse({});
+  return result.toDataStreamResponse();
 }
 
 export async function DELETE(request: Request) {
+  // PoC: Simplified DELETE (no DB, no auth)
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -244,25 +173,7 @@ export async function DELETE(request: Request) {
     return new Response("Not Found", { status: 404 });
   }
 
-  const session = await auth();
-
-  if (!session || !session.user) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  try {
-    const chat = await getChatById({ id });
-
-    if (chat.userId !== session.user.id) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-
-    await deleteChatById({ id });
-
-    return new Response("Chat deleted", { status: 200 });
-  } catch (error) {
-    return new Response("An error occurred while processing your request", {
-      status: 500,
-    });
-  }
+  // PoC: No authentication or database persistence
+  console.log("[PoC] Mock deleteChat:", id);
+  return new Response("Chat deleted (PoC - not persisted)", { status: 200 });
 }

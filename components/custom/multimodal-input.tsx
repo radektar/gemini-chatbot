@@ -21,14 +21,14 @@ import { Textarea } from "../ui/textarea";
 
 const suggestedActions = [
   {
-    title: "Help me book a flight",
-    label: "from San Francisco to London",
-    action: "Help me book a flight from San Francisco to London",
+    title: "Pokaż moje tablice",
+    label: "w Monday.com",
+    action: "Pokaż moje tablice w Monday.com",
   },
   {
-    title: "What is the status",
-    label: "of flight BA142 flying tmrw?",
-    action: "What is the status of flight BA142 flying tmrw?",
+    title: "Szukaj w historii Slack",
+    label: "o projekcie X",
+    action: "Szukaj w historii Slack o projekcie X",
   },
 ];
 
