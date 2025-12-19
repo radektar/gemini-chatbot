@@ -13,14 +13,19 @@
 
 ## Krok 2: Skonfiguruj zmienną środowiskową
 
-1. Otwórz plik `.env` w głównym katalogu projektu
+1. Otwórz plik `.env.local` w głównym katalogu projektu
 2. Dodaj lub zaktualizuj:
 
 ```env
 MONDAY_API_TOKEN=eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjEyMzQ1Njc4LCJ1aWQiOjEyMzQ1Njc4fQ.xxxxxxxxxxxxx
+
+# OPCJONALNE: Ograniczenie dostępu do jednej tablicy (dla testów/PoC)
+# Zostaw puste lub usuń aby mieć dostęp do wszystkich tablic
+MONDAY_ALLOWED_BOARD_ID=5088644227
 ```
 
 3. Zastąp `eyJhbG...` swoim rzeczywistym tokenem
+4. Opcjonalnie: Ustaw `MONDAY_ALLOWED_BOARD_ID` aby ograniczyć dostęp do konkretnej tablicy
 
 ## Krok 3: Uruchom aplikację
 
@@ -52,10 +57,38 @@ Monday.com MCP server connected (READ-ONLY MODE)
 [Monday.com MCP] Loaded 15 read-only tools out of 25 total tools
 ```
 
+## Ograniczenie dostępu do konkretnej tablicy
+
+### Jak włączyć ograniczenie:
+
+1. Otwórz tablicę w Monday.com
+2. Skopiuj ID z URL: `https://yourworkspace.monday.com/boards/5088644227`
+3. Ustaw w `.env.local`:
+   ```env
+   MONDAY_ALLOWED_BOARD_ID=5088644227
+   ```
+4. Zrestartuj aplikację (`npm run dev`)
+
+### Jak wyłączyć ograniczenie (dostęp do wszystkich tablic):
+
+**Opcja 1:** Zostaw pustą wartość
+```env
+MONDAY_ALLOWED_BOARD_ID=
+```
+
+**Opcja 2:** Usuń całą linię z `.env.local`
+
+**Opcja 3:** Zakomentuj linię
+```env
+# MONDAY_ALLOWED_BOARD_ID=5088644227
+```
+
+Po wyłączeniu, chatbot będzie miał dostęp do **wszystkich tablic** dostępnych przez API token.
+
 ## Rozwiązywanie problemów
 
 ### Problem: "MONDAY_API_TOKEN not set"
-**Rozwiązanie**: Sprawdź czy token jest w pliku `.env` i czy plik jest w głównym katalogu projektu
+**Rozwiązanie**: Sprawdź czy token jest w pliku `.env.local` i czy plik jest w głównym katalogu projektu
 
 ### Problem: "Failed to initialize MCP servers"
 **Rozwiązanie**: 
@@ -65,6 +98,9 @@ Monday.com MCP server connected (READ-ONLY MODE)
 
 ### Problem: "Blocked write operation"
 **Rozwiązanie**: To jest normalne - operacje write są blokowane w trybie read-only. Użyj tylko operacji odczytu.
+
+### Problem: "Access denied: This PoC is restricted to board ID..."
+**Rozwiązanie**: To oznacza, że `MONDAY_ALLOWED_BOARD_ID` jest ustawione i próbujesz uzyskać dostęp do innej tablicy. Aby wyłączyć ograniczenie, zobacz sekcję "Jak wyłączyć ograniczenie" powyżej.
 
 ## Bezpieczeństwo
 

@@ -3,7 +3,7 @@
 // READ-ONLY MODE: Only read operations are allowed, no write/update/delete
 
 import { mcpManager } from "./client";
-import { mondayMCPConfig } from "./monday";
+import { getMondayMCPConfig } from "./monday";
 import { filterReadOnlyTools, isReadOnlyTool } from "@/lib/monday-readonly";
 
 let mcpInitialized = false;
@@ -16,7 +16,7 @@ export async function initializeMCP() {
   try {
     // Initialize Monday.com MCP server using official package
     if (process.env.MONDAY_API_TOKEN) {
-      await mcpManager.connect(mondayMCPConfig);
+      await mcpManager.connect(getMondayMCPConfig());
       const boardId = process.env.MONDAY_ALLOWED_BOARD_ID;
       console.log(
         `Monday.com MCP server connected (READ-ONLY MODE${boardId ? `, restricted to board ${boardId}` : ""})`
@@ -53,6 +53,106 @@ export async function getMondayMCPTools() {
   }
 }
 
+/**
+ * Filter Monday.com MCP results to only include allowed board
+ * 
+ * HOW TO DISABLE: Set MONDAY_ALLOWED_BOARD_ID to empty string or remove from .env.local
+ * When disabled/empty, all boards are accessible
+ */
+function filterMondayResult(
+  result: any,
+  allowedBoardId: string,
+  toolName: string
+): any {
+  if (!result) return result;
+
+  // Handle different MCP response structures
+  // MCP tools can return: { content: [...], isError: false } or direct data
+  let data = result;
+  let isWrapped = false;
+
+  // Check if result is MCP-wrapped response
+  if (result.content && Array.isArray(result.content)) {
+    isWrapped = true;
+    // Extract actual data from MCP content wrapper
+    const textContent = result.content.find((c: any) => c.type === "text");
+    if (textContent && textContent.text) {
+      try {
+        data = JSON.parse(textContent.text);
+      } catch {
+        data = textContent.text;
+      }
+    }
+  }
+
+  // Filter boards in response
+  let filtered = false;
+  let originalCount = 0;
+  let filteredCount = 0;
+
+  if (data && typeof data === "object") {
+    // Case 1: Direct boards array
+    if (Array.isArray(data.boards)) {
+      originalCount = data.boards.length;
+      data.boards = data.boards.filter((board: any) => board.id === allowedBoardId);
+      filteredCount = data.boards.length;
+      filtered = true;
+    }
+    // Case 2: Nested boards in data property
+    else if (data.data && Array.isArray(data.data.boards)) {
+      originalCount = data.data.boards.length;
+      data.data.boards = data.data.boards.filter((board: any) => board.id === allowedBoardId);
+      filteredCount = data.data.boards.length;
+      filtered = true;
+    }
+    // Case 3: Single board object (verify it's the allowed one)
+    else if (data.board && data.board.id) {
+      if (data.board.id !== allowedBoardId) {
+        console.warn(
+          `[SECURITY] Board filtered out: ${data.board.id} (allowed: ${allowedBoardId})`
+        );
+        data.board = null;
+        filtered = true;
+        originalCount = 1;
+        filteredCount = 0;
+      }
+    }
+    // Case 4: Direct board in data.data
+    else if (data.data && data.data.board && data.data.board.id) {
+      if (data.data.board.id !== allowedBoardId) {
+        console.warn(
+          `[SECURITY] Board filtered out: ${data.data.board.id} (allowed: ${allowedBoardId})`
+        );
+        data.data.board = null;
+        filtered = true;
+        originalCount = 1;
+        filteredCount = 0;
+      }
+    }
+  }
+
+  if (filtered) {
+    console.log(
+      `[SECURITY] Filtered boards for ${toolName}: ${originalCount} → ${filteredCount} (allowed: ${allowedBoardId})`
+    );
+  }
+
+  // Wrap back if it was wrapped
+  if (isWrapped && result.content) {
+    return {
+      ...result,
+      content: [
+        {
+          type: "text",
+          text: typeof data === "string" ? data : JSON.stringify(data),
+        },
+      ],
+    };
+  }
+
+  return data;
+}
+
 export async function callMondayMCPTool(
   toolName: string,
   args: Record<string, any>
@@ -65,11 +165,14 @@ export async function callMondayMCPTool(
   }
 
   // Board ID validation - restrict access to allowed board only
-  const allowedBoardId = process.env.MONDAY_ALLOWED_BOARD_ID;
+  // TO DISABLE BOARD RESTRICTION: Set MONDAY_ALLOWED_BOARD_ID to empty string in .env.local
+  const allowedBoardId = process.env.MONDAY_ALLOWED_BOARD_ID?.trim();
   if (allowedBoardId) {
     // Check if args contain board_id or boardIds parameter
+    // Convert to string for comparison (MCP might use numbers)
     const boardId = args.board_id || args.boardId || args.boardIds?.[0];
-    if (boardId && boardId !== allowedBoardId) {
+    const boardIdStr = boardId ? String(boardId) : null;
+    if (boardIdStr && boardIdStr !== allowedBoardId) {
       console.warn(
         `[SECURITY] Board access blocked: Attempted access to board ${boardId}, only board ${allowedBoardId} is allowed`
       );
@@ -83,7 +186,9 @@ export async function callMondayMCPTool(
     if (!boardId && (toolName.includes("board") || toolName.includes("item"))) {
       // Only inject if the tool accepts board_id parameter
       if (args.board_id === undefined && args.boardId === undefined) {
-        args.board_id = allowedBoardId;
+        // Try as number first (MCP tools often expect numbers), fallback to string
+        const boardIdNum = parseInt(allowedBoardId, 10);
+        args.boardId = isNaN(boardIdNum) ? allowedBoardId : boardIdNum;
       }
     }
   }
@@ -92,11 +197,18 @@ export async function callMondayMCPTool(
   console.log(`[Monday.com MCP] Calling tool: ${toolName}`, {
     args: JSON.stringify(args),
     timestamp: new Date().toISOString(),
+    boardRestriction: allowedBoardId || "DISABLED (all boards accessible)",
   });
 
   try {
     await initializeMCP();
-    const result = await mcpManager.callTool("monday", toolName, args);
+    let result = await mcpManager.callTool("monday", toolName, args);
+    
+    // Apply board filtering to results if board restriction is enabled
+    if (allowedBoardId) {
+      result = filterMondayResult(result, allowedBoardId, toolName);
+    }
+    
     console.log(`[Monday.com MCP] Tool ${toolName} executed successfully`);
     return result;
   } catch (error) {

@@ -1,12 +1,13 @@
 {
   "name": "gemini-chatbot",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "tsx db/migrate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:board-filter": "tsx scripts/test-board-filtering.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",

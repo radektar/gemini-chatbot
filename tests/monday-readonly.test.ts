@@ -234,7 +234,106 @@ test("Tools containing blacklisted keywords should be blocked", () => {
   }
 });
 
+// Test 11: Mutation operations should be blocked
+test("Mutation operations (mutate, insert, post, put, patch) should be blocked", () => {
+  const mutationOperations = [
+    "mutate_item",
+    "mutate_board",
+    "mutate_column",
+    "mutate_group",
+    "insert_item",
+    "insert_board",
+    "insert_column",
+    "post_update",
+    "post_comment",
+    "post_file",
+    "put_item",
+    "put_board",
+    "put_column_value",
+    "patch_item",
+    "patch_board",
+    "patch_column",
+  ];
+
+  for (const tool of mutationOperations) {
+    assert(
+      !isReadOnlyTool(tool),
+      `Expected mutation operation ${tool} to be blocked, but it was allowed`
+    );
+  }
+});
+
+// Test 12: Compound operations should be blocked
+test("Compound operations (move_to, change_multiple, etc.) should be blocked", () => {
+  const compoundOperations = [
+    "move_item_to_group",
+    "move_item_to_board",
+    "change_multiple_column_values",
+    "change_item_status",
+    "change_board_settings",
+    "change_column_settings",
+    "update_multiple_items",
+    "bulk_update_items",
+    "bulk_create_items",
+    "bulk_delete_items",
+    "copy_item_to_board",
+    "copy_board",
+    "duplicate_item_with_updates",
+    "merge_items",
+    "split_item",
+  ];
+
+  for (const tool of compoundOperations) {
+    assert(
+      !isReadOnlyTool(tool),
+      `Expected compound operation ${tool} to be blocked, but it was allowed`
+    );
+  }
+});
+
+// Test 13: Admin operations should be blocked
+test("Admin operations (invite, remove, permissions) should be blocked", () => {
+  const adminOperations = [
+    "invite_user",
+    "invite_user_to_board",
+    "invite_user_to_workspace",
+    "remove_user",
+    "remove_user_from_board",
+    "remove_user_from_workspace",
+    "change_permissions",
+    "change_user_permissions",
+    "change_board_permissions",
+    "change_workspace_permissions",
+    "set_user_role",
+    "set_board_role",
+    "grant_access",
+    "revoke_access",
+    "create_workspace",
+    "delete_workspace",
+    "update_workspace",
+    "create_team",
+    "delete_team",
+    "update_team",
+    "add_user_to_team",
+    "remove_user_from_team",
+  ];
+
+  for (const tool of adminOperations) {
+    assert(
+      !isReadOnlyTool(tool),
+      `Expected admin operation ${tool} to be blocked, but it was allowed`
+    );
+  }
+});
+
 console.log("\n=== All unit tests completed ===");
+
+// Export function to run tests programmatically
+export async function runTests() {
+  // Tests run automatically when this module is imported/executed
+  // The test() calls above execute immediately
+  return Promise.resolve();
+}
 
 // Run tests if executed directly
 if (require.main === module) {
