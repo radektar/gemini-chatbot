@@ -45,6 +45,7 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 ## EPIK: Faza 01 — Auth "gating" end-to-end
 
 **Branch**: `phase/01-auth-gating`  
+**Status**: ✅ Ukończone (2025-12-19)  
 **Entry criteria**: Dostępne zmienne auth (AUTH_SECRET, Google OAuth)  
 **Exit criteria**: Niezalogowany → redirect/401, zalogowany → dostęp do chatu
 
@@ -485,7 +486,7 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 ## Statystyki backlogu
 
 - **Faza 00**: 2 zadania (✅ ukończone)
-- **Faza 01**: 4 zadania (P0: 2, P1: 1, P2: 1)
+- **Faza 01**: 4 zadania (P0: 2, P1: 1, P2: 1) (✅ ukończone 2025-12-19)
 - **Faza 02**: 4 zadania (P0: 3, P1: 1)
 - **Faza 03**: 5 zadań (P0: 1, P1: 2, P2: 2)
 - **Faza 04**: 5 zadań (P0: 4, P1: 1)

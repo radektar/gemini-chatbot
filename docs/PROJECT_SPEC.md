@@ -914,7 +914,7 @@ Każda faza zawiera:
 | Faza | Branch | Cel | Główne deliverables | Testy |
 |------|--------|-----|-------------------|-------|
 | **00** | `phase/00-docs-plan-backlog` | Dokumentacja planu i backlogu | Plan fazowy w PROJECT_SPEC.md, BACKLOG.md | Review checklist |
-| **01** | `phase/01-auth-gating` | System prywatny — wymagana autoryzacja | Middleware auth, ochrona endpointów | Smoke test middleware, manual: redirect/401 |
+| **01** | `phase/01-auth-gating` | System prywatny — wymagana autoryzacja | Middleware auth, ochrona endpointów | Smoke test middleware, manual: redirect/401 | ✅ Ukończone (2025-12-19) |
 | **02** | `phase/02-postgres-history` | Persystencja historii czatów | Postgres/Drizzle, saveChat/getChats | Testy queries.ts, manual: historia per-user |
 | **03** | `phase/03-integrations-readonly` | Integracje read-only + audyt | Monday MCP security, Slack read-only, cleanup debug | Istniejące testy Monday, nowe dla Slack |
 | **04** | `phase/04-plan-first` | Plan-first orchestrator | Slot filling, plan generation, confirmation | Testy parsera slotów, manual: stop&ask flow |
@@ -940,6 +940,7 @@ Każda faza zawiera:
 #### Faza 01 — Auth "gating" end-to-end
 
 - **Branch**: `phase/01-auth-gating`
+- **Status**: ✅ **Ukończone** (2025-12-19)
 - **Cel**: System jest prywatny — bez sesji brak dostępu do UI i API
 - **Zakres**:
   - Przywrócenie ochrony w `middleware.ts` (obecnie jest bypass)
