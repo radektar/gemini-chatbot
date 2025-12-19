@@ -5,7 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.2] - 2025-12-19
+
+### Added
+- **Implementation Plan (Phases)**: Dodano sekcję 12 do `docs/PROJECT_SPEC.md` z planem wdrożenia produkcyjnego podzielonym na 6 faz (01-06)
+  - Każda faza ma własny branch testowy (`phase/<NN>-<slug>`)
+  - Entry/exit criteria oraz scenariusze testowe (automatyczne i manualne) dla każdej fazy
+  - Workflow faz z konwencją branchy i regułami realizacji
+- **Backlog Techniczny**: Utworzono `docs/BACKLOG.md` z szczegółowym backlogiem zadań technicznych
+  - 27 zadań podzielonych na epiki odpowiadające fazom (01-06)
+  - Każde zadanie ma: ID (PH<NN>-<EPIC>-<XXX>), priorytet (P0-P3), zależności, Definition of Done, scenariusze testowe
+  - Otwarte punkty do doprecyzowania (DB policy, Slack storage, AI provider)
+- **Spis treści**: Dodano spis treści na początku `docs/PROJECT_SPEC.md` z linkami do wszystkich sekcji i podsekcji
+
+### Changed
+- **Dokumentacja**: Zaktualizowano sekcję 11 (Dokumentacja dodatkowa) w `docs/PROJECT_SPEC.md`
+  - Dodano linki do `USE_CASES.md` i `BACKLOG.md`
+  - Oznaczono `PHASE_2_PLAN.md` jako DEPRECATED (zastąpiony przez sekcję 12)
 
 ## [0.1.1] - 2025-12-19
 

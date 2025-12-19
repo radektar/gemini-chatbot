@@ -2,24 +2,24 @@ import { convertToCoreMessages, Message, streamText } from "ai";
 import { z } from "zod";
 
 import { geminiProModel } from "@/ai";
+import { auth } from "@/app/(auth)/auth";
+import {
+  deleteChatById,
+  getChatById,
+  saveChat,
+} from "@/db/queries";
+import { slackTools } from "@/integrations";
 import { getMondayMCPTools, callMondayMCPTool } from "@/integrations/mcp/init";
-
-// PoC: Auth removed
-// import { auth } from "@/app/(auth)/auth";
-// PoC: DB queries removed
-// import { deleteChatById, getChatById, saveChat } from "@/db/queries";
-// PoC: Slack integration removed
-// import { slackTools } from "@/integrations";
 
 export async function POST(request: Request) {
   const { id, messages }: { id: string; messages: Array<Message> } =
     await request.json();
 
-  // PoC: Skip authentication check
-  // const session = await auth();
-  // if (!session) {
-  //   return new Response("Unauthorized", { status: 401 });
-  // }
+  const session = await auth();
+
+  if (!session) {
+    return new Response("Unauthorized", { status: 401 });
+  }
 
   const coreMessages = convertToCoreMessages(messages).filter(
     (message) => message.content.length > 0,
@@ -52,24 +52,9 @@ export async function POST(request: Request) {
         } else if (prop.type === "boolean") {
           zodType = z.boolean();
         } else if (prop.type === "array") {
-          // Google Gemini requires proper items type for arrays
-          // Check if MCP schema provides items type, otherwise default to string
-          const itemsType = prop.items?.type;
-          if (itemsType === "number" || itemsType === "integer") {
-            zodType = z.array(z.number());
-          } else if (itemsType === "boolean") {
-            zodType = z.array(z.boolean());
-          } else if (itemsType === "object") {
-            zodType = z.array(z.record(z.string(), z.unknown()));
-          } else {
-            // Default to string array (most common and safest)
-            zodType = z.array(z.string());
-          }
-        } else if (prop.type === "object") {
-          zodType = z.record(z.string(), z.unknown());
+          zodType = z.array(z.any());
         } else {
-          // For unknown types, use string as the safest default
-          zodType = z.string();
+          zodType = z.any();
         }
         
         if (prop.description) {
@@ -109,16 +94,15 @@ export async function POST(request: Request) {
     system: `
       Jesteś asystentem organizacyjnym. Pomagasz pracownikom w:
       - Przeglądaniu zadań z Monday.com (używając MCP - TYLKO ODCZYT)
+      - Przeszukiwaniu historii rozmów ze Slack
       
       WAŻNE: Integracja z Monday.com jest TYLKO DO ODCZYTU. 
       Nie możesz tworzyć, modyfikować ani usuwać danych w Monday.com.
       Jeśli użytkownik prosi o zmiany, wyjaśnij że dostęp jest tylko do odczytu.
       
-      PoC: Dostęp ograniczony do boardu ID 5088645756 (konto testowe).
-      
       Dzisiejsza data: ${new Date().toLocaleDateString('pl-PL')}.
       
-      Odpowiadaj zwięźle i konkretnie. Używaj narzędzi, gdy użytkownik prosi o dostęp do danych z Monday.
+      Odpowiadaj zwięźle i konkretnie. Używaj narzędzi, gdy użytkownik prosi o dostęp do danych z Monday lub Slack.
     `,
     messages: coreMessages,
     tools: {
@@ -138,34 +122,31 @@ export async function POST(request: Request) {
         },
       },
       ...mondayToolsForAI,
-      // PoC: Slack integration removed
-      // ...slackTools,
+      ...slackTools,
     },
-    // PoC: Skip saving to database
-    // onFinish: async ({ responseMessages }) => {
-    //   if (session.user && session.user.id) {
-    //     try {
-    //       await saveChat({
-    //         id,
-    //         messages: [...coreMessages, ...responseMessages],
-    //         userId: session.user.id,
-    //       });
-    //     } catch (error) {
-    //       console.error("Failed to save chat");
-    //     }
-    //   }
-    // },
+    onFinish: async ({ responseMessages }) => {
+      if (session.user && session.user.id) {
+        try {
+          await saveChat({
+            id,
+            messages: [...coreMessages, ...responseMessages],
+            userId: session.user.id,
+          });
+        } catch (error) {
+          console.error("Failed to save chat");
+        }
+      }
+    },
     experimental_telemetry: {
       isEnabled: true,
       functionId: "stream-text",
     },
   });
 
-  return result.toDataStreamResponse();
+  return result.toDataStreamResponse({});
 }
 
 export async function DELETE(request: Request) {
-  // PoC: Simplified DELETE (no DB, no auth)
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
@@ -173,7 +154,25 @@ export async function DELETE(request: Request) {
     return new Response("Not Found", { status: 404 });
   }
 
-  // PoC: No authentication or database persistence
-  console.log("[PoC] Mock deleteChat:", id);
-  return new Response("Chat deleted (PoC - not persisted)", { status: 200 });
+  const session = await auth();
+
+  if (!session || !session.user) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  try {
+    const chat = await getChatById({ id });
+
+    if (chat.userId !== session.user.id) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
+    await deleteChatById({ id });
+
+    return new Response("Chat deleted", { status: 200 });
+  } catch (error) {
+    return new Response("An error occurred while processing your request", {
+      status: 500,
+    });
+  }
 }

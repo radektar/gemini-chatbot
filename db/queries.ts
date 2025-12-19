@@ -1,19 +1,42 @@
 import "server-only";
 
-import { User } from "./schema";
+import { genSaltSync, hashSync } from "bcrypt-ts";
+import { desc, eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
-// PoC: Mock database queries (no Postgres required)
-// All data is stored only in browser session, not persisted
+import { user, chat, User } from "./schema";
+
+// Optionally, if not using email/pass login, you can
+// use the Drizzle adapter for Auth.js / NextAuth
+// https://authjs.dev/reference/adapter/drizzle
+let client = postgres(`${process.env.POSTGRES_URL!}?sslmode=require`);
+let db = drizzle(client);
 
 export async function getUser(email: string): Promise<Array<User>> {
-  // Return mock user for PoC
-  console.log("[PoC] Mock getUser:", email);
-  return [{ id: "poc-user-id", email, password: null }];
+  try {
+    return await db.select().from(user).where(eq(user.email, email));
+  } catch (error) {
+    console.error("Failed to get user from database");
+    throw error;
+  }
 }
 
 export async function createUser(email: string, password?: string) {
-  console.log("[PoC] Mock createUser:", email);
-  return { id: "poc-user-id" };
+  // For OAuth users (Google), password is optional
+  let passwordHash: string | null = null;
+  
+  if (password && password.length > 0) {
+    let salt = genSaltSync(10);
+    passwordHash = hashSync(password, salt);
+  }
+
+  try {
+    return await db.insert(user).values({ email, password: passwordHash });
+  } catch (error) {
+    console.error("Failed to create user in database");
+    throw error;
+  }
 }
 
 export async function saveChat({
@@ -25,25 +48,59 @@ export async function saveChat({
   messages: any;
   userId: string;
 }) {
-  // PoC: Chat history is not persisted, only stored in browser session
-  console.log("[PoC] Mock saveChat - not persisted (id:", id, ")");
-  return { id };
+  try {
+    const selectedChats = await db.select().from(chat).where(eq(chat.id, id));
+
+    if (selectedChats.length > 0) {
+      return await db
+        .update(chat)
+        .set({
+          messages: JSON.stringify(messages),
+        })
+        .where(eq(chat.id, id));
+    }
+
+    return await db.insert(chat).values({
+      id,
+      createdAt: new Date(),
+      messages: JSON.stringify(messages),
+      userId,
+    });
+  } catch (error) {
+    console.error("Failed to save chat in database");
+    throw error;
+  }
 }
 
 export async function deleteChatById({ id }: { id: string }) {
-  console.log("[PoC] Mock deleteChatById:", id);
-  return {};
+  try {
+    return await db.delete(chat).where(eq(chat.id, id));
+  } catch (error) {
+    console.error("Failed to delete chat by id from database");
+    throw error;
+  }
 }
 
 export async function getChatsByUserId({ id }: { id: string }) {
-  // PoC: Return empty array - no persisted history
-  console.log("[PoC] Mock getChatsByUserId:", id);
-  return [];
+  try {
+    return await db
+      .select()
+      .from(chat)
+      .where(eq(chat.userId, id))
+      .orderBy(desc(chat.createdAt));
+  } catch (error) {
+    console.error("Failed to get chats by user from database");
+    throw error;
+  }
 }
 
 export async function getChatById({ id }: { id: string }) {
-  // PoC: Return null - no persisted chats
-  console.log("[PoC] Mock getChatById:", id);
-  return null;
+  try {
+    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
+    return selectedChat;
+  } catch (error) {
+    console.error("Failed to get chat by id from database");
+    throw error;
+  }
 }
 

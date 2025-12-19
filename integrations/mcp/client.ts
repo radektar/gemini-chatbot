@@ -18,7 +18,7 @@ export class MCPClientManager {
     }
 
     const client = new Client({
-      name: `gemini-chatbot-${config.name}`,
+      name: `impact-chad-${config.name}`,
       version: "1.0.0",
     });
 

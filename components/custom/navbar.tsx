@@ -21,13 +21,13 @@ export const Navbar = async () => {
               src="/images/gemini-logo.png"
               height={20}
               width={20}
-              alt="gemini logo"
+              alt="Impact Chad logo"
             />
             <div className="text-zinc-500">
               <SlashIcon size={16} />
             </div>
             <div className="text-sm dark:text-zinc-300 truncate w-28 md:w-fit">
-              Gemini + Monday PoC
+              Impact Chad PoC
             </div>
           </div>
         </div>
@@ -40,6 +40,8 @@ export const Navbar = async () => {
     </>
   );
 };
+
+
 
 
 
