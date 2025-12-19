@@ -1,21 +1,19 @@
 import Image from "next/image";
 
-// PoC: Auth removed
-// import { auth, signOut } from "@/app/(auth)/auth";
+import { auth, signOut } from "@/app/(auth)/auth";
 
 import { History } from "./history";
 import { SlashIcon } from "./icons";
 import { ThemeToggle } from "./theme-toggle";
 
 export const Navbar = async () => {
-  // PoC: No session check
-  // let session = await auth();
+  const session = await auth();
 
   return (
     <>
       <div className="bg-background absolute top-0 left-0 w-dvw py-2 px-3 justify-between flex flex-row items-center z-30">
         <div className="flex flex-row gap-3 items-center">
-          <History user={undefined} />
+          <History user={session?.user} />
           <div className="flex flex-row gap-2 items-center">
             <Image
               src="/images/gemini-logo.png"

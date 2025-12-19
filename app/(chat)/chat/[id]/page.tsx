@@ -1,14 +1,18 @@
 import { CoreMessage } from "ai";
 import { notFound } from "next/navigation";
 
-// PoC: Auth removed
-// import { auth } from "@/app/(auth)/auth";
+import { auth } from "@/app/(auth)/auth";
 import { Chat as PreviewChat } from "@/components/custom/chat";
 import { getChatById } from "@/db/queries";
 import { Chat } from "@/db/schema";
 import { convertToUIMessages } from "@/lib/utils";
 
 export default async function Page({ params }: { params: any }) {
+  const session = await auth();
+  if (!session) {
+    notFound(); // Middleware should redirect, but this is a safety check
+  }
+
   const { id } = params;
   const chatFromDb = await getChatById({ id });
 

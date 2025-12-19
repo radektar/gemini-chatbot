@@ -42,16 +42,27 @@ export const {
       if (GOOGLE_WORKSPACE_DOMAIN && user.email) {
         const emailDomain = user.email.split("@")[1];
         if (emailDomain !== GOOGLE_WORKSPACE_DOMAIN) {
+          console.error(`[Auth] Domain mismatch: ${emailDomain} !== ${GOOGLE_WORKSPACE_DOMAIN}`);
           return false; // Reject sign-in if domain doesn't match
         }
       }
 
-      // Create user in database if doesn't exist
+      // Create user in database if doesn't exist (graceful degradation if DB not configured)
       if (user.email) {
-        const existingUsers = await getUser(user.email);
-        if (existingUsers.length === 0) {
-          // Create user without password (OAuth users don't need passwords)
-          await createUser(user.email);
+        try {
+          const existingUsers = await getUser(user.email);
+          if (existingUsers.length === 0) {
+            // Create user without password (OAuth users don't need passwords)
+            await createUser(user.email);
+            console.log(`[Auth] Created user: ${user.email}`);
+          } else {
+            console.log(`[Auth] User exists: ${user.email}`);
+          }
+        } catch (error) {
+          // Database not configured (PoC mode) - allow sign-in anyway
+          // User will be authenticated but not persisted in DB
+          console.warn(`[Auth] Database not available (PoC mode) - allowing sign-in for ${user.email}`);
+          // Don't throw - allow sign-in to proceed
         }
       }
 
@@ -59,10 +70,19 @@ export const {
     },
     async jwt({ token, user, account }) {
       if (user) {
-        // Get user from database to get the ID
-        const dbUsers = await getUser(user.email!);
-        if (dbUsers.length > 0) {
-          token.id = dbUsers[0].id;
+        // Get user from database to get the ID (graceful degradation if DB not configured)
+        try {
+          const dbUsers = await getUser(user.email!);
+          if (dbUsers.length > 0) {
+            token.id = dbUsers[0].id;
+          } else {
+            // No DB user found - use email as fallback ID for PoC mode
+            token.id = user.email || "unknown";
+          }
+        } catch (error) {
+          // Database not configured (PoC mode) - use email as fallback ID
+          console.warn(`[Auth] Database not available (PoC mode) - using email as ID for ${user.email}`);
+          token.id = user.email || "unknown";
         }
       }
 

@@ -10,12 +10,51 @@ import { user, chat, User } from "./schema";
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
 // https://authjs.dev/reference/adapter/drizzle
-let client = postgres(`${process.env.POSTGRES_URL!}?sslmode=require`);
-let db = drizzle(client);
+
+// Check if POSTGRES_URL is configured (not required in PoC mode)
+function isDatabaseConfigured(): boolean {
+  if (!process.env.POSTGRES_URL) {
+    return false;
+  }
+  
+  const postgresUrl = process.env.POSTGRES_URL;
+  
+  // Check if POSTGRES_URL is a placeholder
+  const isPlaceholder = 
+    postgresUrl.includes('user:password@host:port') ||
+    postgresUrl === 'postgresql://user:password@host:port/database?sslmode=require';
+  
+  return !isPlaceholder;
+}
+
+// Lazy initialization of database connection
+let client: postgres.Sql | null = null;
+let db: ReturnType<typeof drizzle> | null = null;
+
+function getDb() {
+  if (!isDatabaseConfigured()) {
+    console.warn("⚠️  Database not configured - running in PoC mode without persistence");
+    throw new Error("Database not configured. Set POSTGRES_URL environment variable to enable database features.");
+  }
+  
+  if (!db) {
+    const baseUrl = process.env.POSTGRES_URL!;
+    // Only append sslmode if it's not already in the URL
+    const constructedUrl = baseUrl.includes('sslmode') 
+      ? baseUrl 
+      : `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}sslmode=require`;
+    
+    client = postgres(constructedUrl);
+    db = drizzle(client);
+  }
+  
+  return db;
+}
 
 export async function getUser(email: string): Promise<Array<User>> {
   try {
-    return await db.select().from(user).where(eq(user.email, email));
+    const database = getDb();
+    return await database.select().from(user).where(eq(user.email, email));
   } catch (error) {
     console.error("Failed to get user from database");
     throw error;
@@ -32,7 +71,8 @@ export async function createUser(email: string, password?: string) {
   }
 
   try {
-    return await db.insert(user).values({ email, password: passwordHash });
+    const database = getDb();
+    return await database.insert(user).values({ email, password: passwordHash });
   } catch (error) {
     console.error("Failed to create user in database");
     throw error;
@@ -49,10 +89,11 @@ export async function saveChat({
   userId: string;
 }) {
   try {
-    const selectedChats = await db.select().from(chat).where(eq(chat.id, id));
+    const database = getDb();
+    const selectedChats = await database.select().from(chat).where(eq(chat.id, id));
 
     if (selectedChats.length > 0) {
-      return await db
+      return await database
         .update(chat)
         .set({
           messages: JSON.stringify(messages),
@@ -60,13 +101,18 @@ export async function saveChat({
         .where(eq(chat.id, id));
     }
 
-    return await db.insert(chat).values({
+    return await database.insert(chat).values({
       id,
       createdAt: new Date(),
       messages: JSON.stringify(messages),
       userId,
     });
   } catch (error) {
+    // Graceful degradation: silently fail if DB not configured (PoC mode)
+    if (error instanceof Error && error.message.includes("Database not configured")) {
+      console.warn("⚠️  Database not configured - chat not saved (PoC mode)");
+      return; // Silent fail - chat exists only in session
+    }
     console.error("Failed to save chat in database");
     throw error;
   }
@@ -74,8 +120,14 @@ export async function saveChat({
 
 export async function deleteChatById({ id }: { id: string }) {
   try {
-    return await db.delete(chat).where(eq(chat.id, id));
+    const database = getDb();
+    return await database.delete(chat).where(eq(chat.id, id));
   } catch (error) {
+    // Graceful degradation: silently fail if DB not configured (PoC mode)
+    if (error instanceof Error && error.message.includes("Database not configured")) {
+      console.warn("⚠️  Database not configured - chat deletion skipped (PoC mode)");
+      return; // Silent fail - chat doesn't exist in DB anyway
+    }
     console.error("Failed to delete chat by id from database");
     throw error;
   }
@@ -83,12 +135,18 @@ export async function deleteChatById({ id }: { id: string }) {
 
 export async function getChatsByUserId({ id }: { id: string }) {
   try {
-    return await db
+    const database = getDb();
+    return await database
       .select()
       .from(chat)
       .where(eq(chat.userId, id))
       .orderBy(desc(chat.createdAt));
   } catch (error) {
+    // Graceful degradation: return empty array if DB not configured (PoC mode)
+    if (error instanceof Error && error.message.includes("Database not configured")) {
+      console.warn("⚠️  Database not configured - returning empty chat list (PoC mode)");
+      return [];
+    }
     console.error("Failed to get chats by user from database");
     throw error;
   }
@@ -96,9 +154,15 @@ export async function getChatsByUserId({ id }: { id: string }) {
 
 export async function getChatById({ id }: { id: string }) {
   try {
-    const [selectedChat] = await db.select().from(chat).where(eq(chat.id, id));
+    const database = getDb();
+    const [selectedChat] = await database.select().from(chat).where(eq(chat.id, id));
     return selectedChat;
   } catch (error) {
+    // Graceful degradation: return undefined if DB not configured (PoC mode)
+    if (error instanceof Error && error.message.includes("Database not configured")) {
+      console.warn("⚠️  Database not configured - returning undefined for chat (PoC mode)");
+      return undefined;
+    }
     console.error("Failed to get chat by id from database");
     throw error;
   }

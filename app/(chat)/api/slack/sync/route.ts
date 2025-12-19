@@ -1,8 +1,13 @@
 // PoC: Slack integration disabled
-// import { auth } from "@/app/(auth)/auth";
+import { auth } from "@/app/(auth)/auth";
 // import { syncAllChannels, syncChannel } from "@/integrations/slack/sync";
 
 export async function POST(request: Request) {
+  const session = await auth();
+  if (!session) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
   // PoC: Slack integration disabled
   return Response.json(
     {
@@ -11,11 +16,6 @@ export async function POST(request: Request) {
     },
     { status: 503 }
   );
-
-  // const session = await auth();
-  // if (!session) {
-  //   return new Response("Unauthorized", { status: 401 });
-  // }
 
   // PoC: Slack integration disabled
   // try {
