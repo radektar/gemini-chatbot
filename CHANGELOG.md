@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2025-12-19
+
+### Added
+- **Faza 01 - Auth Gating**: Przywrócono pełną autoryzację end-to-end zgodnie z BACKLOG PH01-AUTH-001/002/004
+  - NextAuth middleware z rozróżnieniem UI redirect vs API 401
+  - DEV bypass flaga (`AUTH_BYPASS=true`) dla wygodnego testowania lokalnie
+  - Testy automatyczne smoke dla middleware i endpointów (`tests/auth-middleware.test.ts`)
+  - Graceful degradation dla DB queries w PoC mode (zwracają bezpieczne wartości domyślne)
+
+### Fixed
+- **Middleware**: Wykluczono `/api/auth/*` routes z blokowania (NextAuth callback routes muszą być dostępne bez sesji)
+- **Auth callback**: Dodano graceful degradation w `signIn` callback - działa bez bazy danych w PoC mode
+- **DB queries**: Wszystkie funkcje (`getChatsByUserId`, `getChatById`, `saveChat`, `deleteChatById`) mają graceful degradation dla PoC mode
+- **API endpoints**: Ujednolicono wymaganie sesji w `/api/files/upload` i `/api/slack/sync`
+
+### Changed
+- **Middleware**: Przywrócono pełną autoryzację z NextAuth (było PoC bypass)
+- **Navbar**: Przywrócono pobranie sesji i przekazywanie `user` do komponentu `History`
+- **Chat page**: Dodano wymaganie sesji w `app/(chat)/chat/[id]/page.tsx`
+- **Actions**: Poprawiono obsługę `NEXT_REDIRECT` error w `login` action (to nie jest prawdziwy błąd)
+
+### Security
+- Wszystkie endpointy API wymagają sesji i zwracają `401 Unauthorized` bez autoryzacji
+- Middleware chroni wszystkie UI routes (redirect do `/login`) i API routes (401)
+- NextAuth callback routes (`/api/auth/*`) są wykluczone z blokowania (obsługiwane przez NextAuth)
+
 ## [0.1.2] - 2025-12-19
 
 ### Added

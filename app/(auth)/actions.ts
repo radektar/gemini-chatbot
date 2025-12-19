@@ -14,7 +14,13 @@ export const login = async (): Promise<LoginActionState> => {
     });
 
     return { status: "success" };
-  } catch (error) {
+  } catch (error: any) {
+    // NEXT_REDIRECT is not a real error - it's how Next.js handles redirects
+    // This is expected behavior when signIn redirects to OAuth provider
+    if (error?.digest?.startsWith("NEXT_REDIRECT")) {
+      // Re-throw to let Next.js handle the redirect
+      throw error;
+    }
     console.error("Google sign-in error:", error);
     return { status: "failed" };
   }
