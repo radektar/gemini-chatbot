@@ -206,11 +206,12 @@ npx tsx tests/monday-mcp-e2e-security.test.ts
 
 | Scenariusz | Status | Priorytet |
 |------------|--------|-----------|
-| Próba utworzenia item | ⏳ | P0 |
-| Pobranie danych | ⏳ | P0 |
+| Próba utworzenia item | ✅ | P0 |
+| Pobranie danych | ✅ | P0 |
 | Brak debug artifacts | ✅ | P1 |
-| Logi bezpieczeństwa | ⏳ | P1 |
+| Logi bezpieczeństwa | ✅ | P1 |
 | Fail-safe dla nieznanych | ✅ | P1 |
+| GraphQL validation | ✅ | P1 |
 
 ---
 
@@ -267,5 +268,13 @@ npx tsx tests/monday-mcp-e2e-security.test.ts
 - ✅ GraphQL validation działa
 - ✅ Wszystkie kluczowe testy przechodzą (97.2%)
 
-**Status:** ✅ **GOTOWE DO WDROŻENIA** (po testach manualnych)
+**Status:** ✅ **GOTOWE DO WDROŻENIA**
+
+**Wszystkie testy manualne zakończone pomyślnie:**
+- ✅ Scenariusz 1: Próba utworzenia item → odmowa (zweryfikowane przez użytkownika)
+- ✅ Scenariusz 2: Pobranie danych → działa (zweryfikowane przez użytkownika)
+- ✅ Scenariusz 3: Brak debug artifacts → zweryfikowane automatycznie
+- ✅ Scenariusz 4: Logi bezpieczne → brak sekretów (zweryfikowane przez użytkownika)
+- ✅ Scenariusz 5: Fail-safe działa → nieznane blokowane (zweryfikowane automatycznie)
+- ✅ Scenariusz 6: GraphQL validation → mutacje blokowane (zweryfikowane automatycznie)
 
