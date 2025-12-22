@@ -2,21 +2,22 @@
 
 import { WebClient } from "@slack/web-api";
 
-const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
-
-if (!SLACK_BOT_TOKEN) {
-  console.warn("SLACK_BOT_TOKEN is not set. Slack integration will not work.");
+// Read token in runtime, not at module load time (allows dotenv to load it first)
+function getSlackBotToken(): string {
+  const token = process.env.SLACK_BOT_TOKEN;
+  if (!token) {
+    throw new Error("SLACK_BOT_TOKEN is not configured");
+  }
+  return token;
 }
 
 let slackClient: WebClient | null = null;
 
 function getSlackClient(): WebClient {
-  if (!SLACK_BOT_TOKEN) {
-    throw new Error("SLACK_BOT_TOKEN is not configured");
-  }
+  const token = getSlackBotToken();
 
   if (!slackClient) {
-    slackClient = new WebClient(SLACK_BOT_TOKEN);
+    slackClient = new WebClient(token);
   }
 
   return slackClient;

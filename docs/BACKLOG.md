@@ -255,8 +255,8 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
   - ✅ Test: Slack tools nie mają write operations (`tests/slack-readonly.test.ts`)
   - ✅ Test: Slack API calls są logowane (audit logging)
 - **Testy manualne**:
-  - ⏳ Poproś o Slack search → dostajesz wynik (jeśli integracja aktywna)
-  - ⏳ Poproś o wysłanie wiadomości → odmowa (jeśli próba write)
+  - ✅ Poproś o Slack search → dostajesz wynik (zweryfikowane: wyszukiwanie "Lenovo" zwraca 10 wyników)
+  - ⏳ Poproś o wysłanie wiadomości → odmowa (do przetestowania w UI)
 
 ### PH03-SLACK-002: Testy automatyczne Slack security
 **Status**: ✅ Ukończone (2025-12-22)
@@ -501,13 +501,16 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 
 - **Faza 00**: 2 zadania (✅ ukończone)
 - **Faza 01**: 4 zadania (P0: 2, P1: 1, P2: 1) (✅ ukończone 2025-12-19)
-- **Faza 02**: 4 zadania (P0: 3, P1: 1)
-- **Faza 03**: 5 zadań (P0: 1, P1: 2, P2: 2)
-- **Faza 04**: 5 zadań (P0: 4, P1: 1)
-- **Faza 05**: 3 zadania (P0: 2, P1: 1)
-- **Faza 06**: 4 zadania (P0: 2, P1: 1, P2: 1)
+- **Faza 02**: 4 zadania (P0: 3, P1: 1) (✅ ukończone 2025-12-19)
+- **Faza 03**: 5 zadań (P0: 1, P1: 2, P2: 2) (✅ ukończone 2025-12-22)
+- **Faza 04**: 5 zadań (P0: 4, P1: 1) (⏳ nie rozpoczęte)
+- **Faza 05**: 3 zadania (P0: 2, P1: 1) (⏳ nie rozpoczęte)
+- **Faza 06**: 4 zadania (P0: 2, P1: 1, P2: 1) (⏳ nie rozpoczęte)
 
 **Łącznie**: 27 zadań
+**Ukończone**: 15 zadań (56%)
+**W trakcie**: 0 zadań
+**Pozostało**: 12 zadań (44%)
 
 ---
 

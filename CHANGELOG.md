@@ -18,11 +18,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Audit logging dla wszystkich operacji Slack API
   - Dokumentacja security: `docs/SLACK_SECURITY.md`
   - Testy automatyczne: `tests/slack-readonly.test.ts` (12 testów, wszystkie przechodzą)
+  - Skrypt testowy: `scripts/test-slack-search.ts` do walidacji synchronizacji i wyszukiwania
 
 ### Changed
-- **integrations/slack/client.ts**: Zmieniono `types` z `"public_channel,private_channel"` na `"public_channel"` (tylko publiczne kanały)
+- **integrations/slack/client.ts**: 
+  - Zmieniono `types` z `"public_channel,private_channel"` na `"public_channel"` (tylko publiczne kanały)
+  - Odczyt `SLACK_BOT_TOKEN` w runtime zamiast przy imporcie modułu (umożliwia użycie dotenv w skryptach)
 - **getChannels()**: Dodano filtrowanie przez whitelist jeśli `SLACK_ALLOWED_CHANNELS` skonfigurowane
 - **Audit logging**: Wszystkie operacje Slack API są logowane z timestamp, operation, channel ID
+- **app/(chat)/api/slack/sync/route.ts**: Włączono endpoint synchronizacji Slack (był wyłączony w PoC mode)
+  - Endpoint `/api/slack/sync` teraz aktywnie synchronizuje kanały Slack
+  - Wspiera synchronizację wszystkich kanałów lub konkretnego kanału (`channelId`)
+
+### Fixed
+- **Slack search**: Naprawiono problem z brakiem wyników wyszukiwania
+  - Przyczyna: brak zsynchronizowanych danych w `data/slack/`
+  - Rozwiązanie: włączenie endpointu sync umożliwia synchronizację danych
+  - Weryfikacja: wyszukiwanie "Lenovo" zwraca 10 wyników po synchronizacji
 
 ### Security
 - **Tylko publiczne kanały**: Prywatne kanały, DM, i grupy są całkowicie zablokowane
