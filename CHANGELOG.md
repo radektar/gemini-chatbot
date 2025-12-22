@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2025-12-19
+
+### Added
+- **Faza 03 - Enhanced Monday.com Read-Only**: Ulepszenie mechanizmu Read-Only dla Monday.com MCP zgodnie z BACKLOG PH03-MONDAY-001/002
+  - Explicit whitelist operacji read-only (`MONDAY_READ_ONLY_OPERATIONS` Set z 20+ operacjami)
+  - Explicit blacklist operacji write (`MONDAY_WRITE_OPERATIONS` Set z 20+ operacjami)
+  - `ReadOnlyModeError` class z informacją o zablokowanej operacji
+  - `validateReadOnlyOperation()` funkcja walidująca operacje przed wykonaniem
+  - `validateGraphQLQuery()` funkcja wykrywająca mutacje GraphQL
+  - Fail-safe default: nieznane operacje są blokowane domyślnie
+  - Ulepszone testy (`tests/monday-readonly-enhanced.test.ts`) z 7 klasami testowymi
+
+### Changed
+- **lib/monday-readonly.ts**: Refaktoryzacja `isReadOnlyTool()` na 5-etapową walidację:
+  1. Check explicit blacklist (highest priority)
+  2. Check explicit whitelist
+  3. Check blacklist keywords (fuzzy matching)
+  4. Check read patterns (get_, list_, read_, search_, fetch_, query_, retrieve_)
+  5. Fail-safe: reject unknown operations
+- **Normalizacja nazw operacji**: Automatyczne usuwanie prefiksów `mcp_monday-mcp_` i `mcp_` przed walidacją
+
+### Removed
+- **Debug artifacts**: Usunięte wszystkie `fetch('http://127.0.0.1:7242/...')` calls z `lib/monday-readonly.ts` (3 miejsca)
+
+### Security
+- **Fail-safe by default**: Nieznane operacje są automatycznie blokowane (zamiast dozwalane)
+- **GraphQL mutation detection**: Wykrywanie mutacji GraphQL z ignorowaniem komentarzy i stringów
+- **Explicit whitelist/blacklist**: Jasne listy operacji zamiast tylko fuzzy matching
+
+### Testing
+- **Testy automatyczne**: Wszystkie testy przechodzą pomyślnie
+  - ✅ Explicit read operations allowed
+  - ✅ Explicit write operations blocked
+  - ✅ Unknown operations blocked (fail-safe)
+  - ✅ GraphQL mutations blocked
+  - ✅ GraphQL queries allowed
+  - ✅ Whitelist/blacklist consistency verified
+
 ## [0.1.4] - 2025-12-19
 
 ### Added
