@@ -252,7 +252,16 @@ export function isReadOnlyTool(toolName: string): boolean {
     }
   }
   
-  // STEP 4: Fuzzy matching for common read patterns
+  // STEP 4: Check legacy whitelist for backward compatibility
+  // This handles single words like "list", "read", "query" from old READ_ONLY_MONDAY_TOOLS
+  for (const allowed of READ_ONLY_MONDAY_TOOLS) {
+    if (lowerName === allowed.toLowerCase() || lowerName.startsWith(allowed.toLowerCase() + "_")) {
+      console.log(`[Monday.com MCP] ✅ Allowed by legacy whitelist: ${toolName}`);
+      return true;
+    }
+  }
+  
+  // STEP 5: Fuzzy matching for common read patterns
   if (
     lowerName.startsWith("get_") ||
     lowerName.startsWith("list_") ||
@@ -266,7 +275,7 @@ export function isReadOnlyTool(toolName: string): boolean {
     return true;
   }
   
-  // STEP 5: FAIL-SAFE DEFAULT - reject unknown operations
+  // STEP 6: FAIL-SAFE DEFAULT - reject unknown operations
   console.warn(
     `[Monday.com MCP] ⚠️  Unknown operation '${toolName}' - BLOCKED by default (fail-safe). ` +
     `If this is a read-only operation, add it to MONDAY_READ_ONLY_OPERATIONS.`
