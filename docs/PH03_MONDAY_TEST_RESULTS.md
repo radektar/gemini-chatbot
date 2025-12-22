@@ -3,7 +3,7 @@
 **Data:** 2025-12-19  
 **Branch:** `phase/03-integrations-readonly`  
 **Wersja:** 0.1.5  
-**Status:** ✅ **PRODUCTION READY** (z drobną poprawką testu)
+**Status:** ✅ **PRODUCTION READY**
 
 ---
 
