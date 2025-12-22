@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Pole `updatedAt` i `title` w tabeli Chat (auto-generowane z pierwszej wiadomości)
   - Testy automatyczne dla db/queries.ts (`tests/db-queries.test.ts`)
   - Migracja Drizzle z ulepszonym schematem (`lib/drizzle/0001_dashing_steel_serpent.sql`)
+  - Supabase PostgreSQL integration: connection string configuration i migracja produkcyjna
 
 ### Changed
 - **Schemat DB**: VARCHAR(64) → VARCHAR(255) dla email/password (zgodność z bcrypt hash i standardami email)
@@ -27,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - Tabela Reservation (nieużywana w projekcie)
+
+### Testing
+- **Testy manualne**: Wszystkie scenariusze testowe z BACKLOG przeszły pomyślnie
+  - ✅ Persystencja historii czatów (chat widoczny po odświeżeniu)
+  - ✅ Usuwanie chatów (chat znika z bazy danych)
+  - ✅ Otwieranie chatów z historii (messages poprawnie ładowane)
+  - ⏳ Izolacja per-user (do przetestowania online)
 
 ## [0.1.3] - 2025-12-19
 
