@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ON DELETE CASCADE**: Automatyczne usuwanie chatów przy usunięciu użytkownika
 - **saveChat**: Aktualizuje `updatedAt` przy każdym zapisie, generuje `title` z pierwszej wiadomości użytkownika
 - **DELETE /api/chat**: Poprawka obsługi undefined chat (zwraca 404 zamiast crashować)
+- **Chat page (`/chat/[id]`)**: Naprawiono wyświetlanie historii rozmów z bazy danych (było zawsze pusty chat z PoC mode)
+
+### Fixed
+- **Chat history**: Chaty z historii są teraz poprawnie ładowane i wyświetlane po kliknięciu
+- **Security**: Dodano weryfikację własności chatu przed wyświetleniem (użytkownik nie może zobaczyć cudzych chatów)
 
 ### Removed
 - Tabela Reservation (nieużywana w projekcie)
