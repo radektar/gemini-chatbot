@@ -97,13 +97,24 @@ export async function saveChat({
         .update(chat)
         .set({
           messages: JSON.stringify(messages),
+          updatedAt: new Date(),
         })
         .where(eq(chat.id, id));
     }
 
+    // Dla nowego chatu - generowanie title z pierwszej wiadomości użytkownika
+    const firstUserMessage = messages.find((m: any) => m.role === 'user');
+    const title = firstUserMessage?.content 
+      ? (typeof firstUserMessage.content === 'string' 
+          ? firstUserMessage.content.slice(0, 100) 
+          : String(firstUserMessage.content).slice(0, 100))
+      : 'Nowy chat';
+
     return await database.insert(chat).values({
       id,
       createdAt: new Date(),
+      updatedAt: new Date(),
+      title,
       messages: JSON.stringify(messages),
       userId,
     });

@@ -113,10 +113,12 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 ## EPIK: Faza 02 — Postgres/Drizzle: persistencja historii czatów
 
 **Branch**: `phase/02-postgres-history`  
+**Status**: ✅ Ukończone (2025-12-19)  
 **Entry criteria**: Faza 01 zakończona (mamy user identity)  
 **Exit criteria**: Historia czatu trwała po odświeżeniu, per-user isolation
 
 ### PH02-DB-001: Polityka opcjonalności Postgres (degradacja)
+**Status**: ✅ Ukończone
 - **Priorytet**: P0
 - **Zależności**: Brak
 - **Opis**: Ustalić i zaimplementować bezpieczną degradację gdy DB nie jest dostępna
@@ -131,6 +133,7 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
   - Uruchomienie bez POSTGRES_URL → aplikacja działa, historia tylko w sesji
 
 ### PH02-DB-002: Aktywacja migracji Drizzle
+**Status**: ✅ Ukończone
 - **Priorytet**: P0
 - **Zależności**: PH02-DB-001
 - **Opis**: Upewnić się, że migracje działają poprawnie
@@ -144,6 +147,7 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
   - Sprawdzenie schematu w DB → tabele `user` i `chat` istnieją
 
 ### PH02-DB-003: Weryfikacja funkcji saveChat/getChatsByUserId/getChatById
+**Status**: ✅ Ukończone
 - **Priorytet**: P0
 - **Zależności**: PH02-DB-002
 - **Opis**: Upewnić się, że funkcje z `db/queries.ts` działają w prod
@@ -163,6 +167,7 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
   - Zaloguj się innym użytkownikiem → nie widzi chatów pierwszego
 
 ### PH02-DB-004: Endpoint /api/history działa z DB
+**Status**: ✅ Ukończone
 - **Priorytet**: P1
 - **Zależności**: PH02-DB-003
 - **Opis**: Upewnić się, że endpoint historii używa DB
