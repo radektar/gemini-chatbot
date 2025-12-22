@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2025-12-19
+
+### Added
+- **Faza 02 - Postgres/Drizzle Persistence**: Persystencja historii czatów z Supabase PostgreSQL zgodnie z BACKLOG PH02-DB-001/002/003/004
+  - Indeksy na tabelach User i Chat dla wydajności (`user_email_idx`, `chat_userId_idx`, `chat_createdAt_idx`)
+  - Pole `updatedAt` i `title` w tabeli Chat (auto-generowane z pierwszej wiadomości)
+  - Testy automatyczne dla db/queries.ts (`tests/db-queries.test.ts`)
+  - Migracja Drizzle z ulepszonym schematem (`lib/drizzle/0001_dashing_steel_serpent.sql`)
+  - Supabase PostgreSQL integration: connection string configuration i migracja produkcyjna
+
+### Changed
+- **Schemat DB**: VARCHAR(64) → VARCHAR(255) dla email/password (zgodność z bcrypt hash i standardami email)
+- **ON DELETE CASCADE**: Automatyczne usuwanie chatów przy usunięciu użytkownika
+- **saveChat**: Aktualizuje `updatedAt` przy każdym zapisie, generuje `title` z pierwszej wiadomości użytkownika
+- **DELETE /api/chat**: Poprawka obsługi undefined chat (zwraca 404 zamiast crashować)
+- **Chat page (`/chat/[id]`)**: Naprawiono wyświetlanie historii rozmów z bazy danych (było zawsze pusty chat z PoC mode)
+
+### Fixed
+- **Chat history**: Chaty z historii są teraz poprawnie ładowane i wyświetlane po kliknięciu
+- **Security**: Dodano weryfikację własności chatu przed wyświetleniem (użytkownik nie może zobaczyć cudzych chatów)
+
+### Removed
+- Tabela Reservation (nieużywana w projekcie)
+
+### Testing
+- **Testy manualne**: Wszystkie scenariusze testowe z BACKLOG przeszły pomyślnie
+  - ✅ Persystencja historii czatów (chat widoczny po odświeżeniu)
+  - ✅ Usuwanie chatów (chat znika z bazy danych)
+  - ✅ Otwieranie chatów z historii (messages poprawnie ładowane)
+  - ⏳ Izolacja per-user (do przetestowania online)
+
 ## [0.1.3] - 2025-12-19
 
 ### Added
