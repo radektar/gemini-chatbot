@@ -5,6 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2025-12-22
+
+### Added
+- **Faza 03 - Slack Read-Only Security**: Zabezpieczenie integracji Slack zgodnie z BACKLOG PH03-SLACK-001/002
+  - Ograniczenie dostępu TYLKO do publicznych kanałów (`public_channel`)
+  - Opcjonalny whitelist kanałów (`SLACK_ALLOWED_CHANNELS`)
+  - Explicit whitelist/blacklist operacji Slack API w `lib/slack-readonly.ts`
+  - `SlackReadOnlyError` i `SlackAccessDeniedError` classes
+  - `validateSlackOperation()` i `validateChannelAccess()` funkcje walidacyjne
+  - Fail-safe default: nieznane operacje blokowane domyślnie
+  - Audit logging dla wszystkich operacji Slack API
+  - Dokumentacja security: `docs/SLACK_SECURITY.md`
+  - Testy automatyczne: `tests/slack-readonly.test.ts` (12 testów, wszystkie przechodzą)
+
+### Changed
+- **integrations/slack/client.ts**: Zmieniono `types` z `"public_channel,private_channel"` na `"public_channel"` (tylko publiczne kanały)
+- **getChannels()**: Dodano filtrowanie przez whitelist jeśli `SLACK_ALLOWED_CHANNELS` skonfigurowane
+- **Audit logging**: Wszystkie operacje Slack API są logowane z timestamp, operation, channel ID
+
+### Security
+- **Tylko publiczne kanały**: Prywatne kanały, DM, i grupy są całkowicie zablokowane
+- **Optional whitelist**: Możliwość ograniczenia do konkretnych publicznych kanałów
+- **Fail-safe by default**: Nieznane operacje Slack API są automatycznie blokowane
+- **Minimal scopes**: Bot wymaga tylko `channels:read` i `channels:history`
+
+### Testing
+- **Testy automatyczne**: 12/12 testów przechodzi pomyślnie (100%)
+  - ✅ Explicit read operations allowed
+  - ✅ Explicit write operations blocked
+  - ✅ Unknown operations blocked (fail-safe)
+  - ✅ Write keywords detected (fuzzy matching)
+  - ✅ Public channels allowed
+  - ✅ Private channels blocked
+  - ✅ DM/mpim blocked
+  - ✅ Case insensitivity verified
+  - ✅ Read patterns allowed
+  - ✅ Whitelist/blacklist consistency verified
+
 ## [0.1.5] - 2025-12-19
 
 ### Added
