@@ -41,7 +41,7 @@ export async function getChannels(): Promise<SlackChannel[]> {
   try {
     const client = getSlackClient();
     const result = await client.conversations.list({
-      types: "public_channel,private_channel",
+      types: "public_channel",  // Only public channels
       exclude_archived: true,
     });
 
@@ -49,10 +49,23 @@ export async function getChannels(): Promise<SlackChannel[]> {
       throw new Error(result.error || "Failed to fetch channels");
     }
 
-    return result.channels.map((channel) => ({
+    // Optional whitelist filtering
+    const allowedChannels = process.env.SLACK_ALLOWED_CHANNELS?.split(',').map(id => id.trim()) || [];
+    
+    let channels = result.channels;
+    
+    // Apply whitelist if configured
+    if (allowedChannels.length > 0) {
+      channels = channels.filter((channel) => allowedChannels.includes(channel.id!));
+      console.log(`[Slack] Filtered to ${channels.length} whitelisted channels (out of ${result.channels.length} total)`);
+    } else {
+      console.log(`[Slack] No whitelist configured - returning all ${channels.length} public channels`);
+    }
+
+    return channels.map((channel) => ({
       id: channel.id!,
       name: channel.name || "",
-      is_private: channel.is_private || false,
+      is_private: false,  // Always false (only public channels)
       is_archived: channel.is_archived || false,
     }));
   } catch (error) {
@@ -67,6 +80,9 @@ export async function getChannelHistory(
   limit: number = 200,
 ): Promise<SlackMessage[]> {
   try {
+    // Audit logging
+    console.log(`[Slack Audit] ${new Date().toISOString()} | Operation: getChannelHistory | Channel: ${channelId} | Limit: ${limit}`);
+    
     const client = getSlackClient();
     const result = await client.conversations.history({
       channel: channelId,
@@ -94,6 +110,9 @@ export async function getChannelHistory(
 export async function getAllChannelHistory(
   channelId: string,
 ): Promise<SlackMessage[]> {
+  // Audit logging
+  console.log(`[Slack Audit] ${new Date().toISOString()} | Operation: getAllChannelHistory | Channel: ${channelId}`);
+  
   const allMessages: SlackMessage[] = [];
   let cursor: string | undefined;
   let oldest: string | undefined;
