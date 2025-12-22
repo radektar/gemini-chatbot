@@ -159,19 +159,19 @@ npx tsx tests/monday-mcp-e2e-security.test.ts
 
 ### Scenariusz 4: Weryfikacja logów bezpieczeństwa
 
-**Kroki:**
-1. Uruchom aplikację: `pnpm dev`
-2. Wykonaj operację read (np. pobierz boardy)
-3. Wykonaj próbę operacji write (np. utwórz item)
-4. Sprawdź logi konsoli serwera
+**Status:** ✅ **ZWERYFIKOWANE PRZEZ UŻYTKOWNIKA**
 
-**Oczekiwany wynik:**
-- ✅ Logi zawierają informacje o dozwolonych operacjach read
-- ✅ Logi zawierają ostrzeżenia o zablokowanych operacjach write
-- ✅ Logi NIE zawierają tokenów, API keys, danych osobowych
-- ✅ Logi NIE zawierają sekretów
+**Wyniki (z logów produkcyjnych):**
+- ✅ Logi zawierają informacje o dozwolonych operacjach read z prefiksem `✅`
+- ✅ Logi zawierają ostrzeżenia o zablokowanych operacjach write z prefiksem `❌`
+- ✅ Logi zawierają ostrzeżenia o nieznanych operacjach z prefiksem `⚠️`
+- ✅ Logi NIE zawierają tokenów API (zweryfikowane przez użytkownika)
+- ✅ Logi NIE zawierają sekretów (zweryfikowane przez użytkownika)
 
-**Status:** ⏳ **DO PRZETESTOWANIA**
+**Przykłady z logów:**
+- `[Monday.com MCP] ✅ Allowed explicit read operation: get_board_items_page`
+- `[Monday.com MCP] ❌ Blocked explicit write operation: create_item`
+- `[Monday.com MCP] ⚠️  Unknown operation 'all_widgets_schema' - BLOCKED by default (fail-safe)`
 
 ---
 
@@ -185,7 +185,43 @@ npx tsx tests/monday-mcp-e2e-security.test.ts
 - ✅ Funkcja zwraca `false` (operacja zablokowana)
 - ✅ W logach: `⚠️ Unknown operation 'unknown_operation_xyz' - BLOCKED by default (fail-safe)`
 
-**Status:** ✅ **ZWERYFIKOWANE W TESTACH AUTOMATYCZNYCH**
+**Status:** ✅ **ZWERYFIKOWANE AUTOMATYCZNIE**
+
+**Wyniki:**
+- ✅ Nieznane operacje są blokowane domyślnie (5 operacji przetestowanych)
+- ✅ Komunikat błędu zawiera informację o fail-safe
+- ✅ `ReadOnlyModeError` zawiera `operationName` z nazwą zablokowanej operacji
+- ✅ W logach produkcyjnych widoczne: `all_widgets_schema` jest blokowane jako unknown
+
+**Przykład z logów produkcyjnych:**
+```
+[Monday.com MCP] ⚠️  Unknown operation 'all_widgets_schema' - BLOCKED by default (fail-safe). 
+If this is a read-only operation, add it to MONDAY_READ_ONLY_OPERATIONS.
+```
+
+**Test automatyczny:** `npx tsx tests/manual-scenarios-3-5-6.test.ts` - Scenariusz 5
+
+**Uwaga:** `all_widgets_schema` pojawia się w logach jako nieznana operacja. Jeśli jest read-only, należy dodać do `MONDAY_READ_ONLY_OPERATIONS`.
+
+---
+
+### Scenariusz 6: Weryfikacja GraphQL queries
+
+**Status:** ✅ **ZWERYFIKOWANE AUTOMATYCZNIE**
+
+**Wyniki:**
+- ✅ Read-only GraphQL query przechodzi walidację
+- ✅ GraphQL mutation jest blokowana (anonymous i named)
+- ✅ Query z komentarzem zawierającym 'mutation' przechodzi walidację (komentarze ignorowane)
+- ✅ Query z stringiem zawierającym 'mutation' przechodzi walidację (stringi ignorowane)
+- ✅ `ReadOnlyModeError` zawiera informację o mutacji w komunikacie
+
+**Test automatyczny:** `npx tsx tests/manual-scenarios-3-5-6.test.ts` - Scenariusz 6
+
+**Przykłady testów:**
+- ✅ Read-only query: `query { boards(ids: [123456]) { name } }` → przechodzi
+- ✅ Mutation: `mutation { create_item(...) { id } }` → blokowana
+- ✅ Query z komentarzem: `query { ... # comment about mutation }` → przechodzi
 
 ---
 
@@ -195,12 +231,13 @@ npx tsx tests/monday-mcp-e2e-security.test.ts
 
 | Test Suite | Status | Passed | Failed | Uwagi |
 |------------|--------|--------|--------|-------|
-| Basic Read-Only | ⚠️ | 12/13 | 1 | Problem kompatybilności wstecznej |
+| Basic Read-Only | ✅ | 13/13 | 0 | Wszystkie testy przechodzą (naprawione) |
+| Manual Scenarios 3/5/6 | ✅ | 8/8 | 0 | Scenariusze 3, 5, 6 zweryfikowane |
 | Enhanced Read-Only | ✅ | 13/13 | 0 | Wszystkie testy przechodzą |
 | Integration Security | ✅ | 10/10 | 0 | Wszystkie testy przechodzą |
 | E2E Security | ⏳ | - | - | Wymaga tokena |
 
-**Total:** 36/36 testów przechodzi (100%)
+**Total:** 44/44 testów przechodzi (100%)
 
 ### Testy Manualne
 
