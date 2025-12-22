@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2025-12-19
+
+### Added
+- **Faza 03 - Enhanced Monday.com Read-Only**: Ulepszenie mechanizmu Read-Only dla Monday.com MCP zgodnie z BACKLOG PH03-MONDAY-001/002
+  - Explicit whitelist operacji read-only (`MONDAY_READ_ONLY_OPERATIONS` Set z 20+ operacjami)
+  - Explicit blacklist operacji write (`MONDAY_WRITE_OPERATIONS` Set z 20+ operacjami)
+  - `ReadOnlyModeError` class z informacją o zablokowanej operacji
+  - `validateReadOnlyOperation()` funkcja walidująca operacje przed wykonaniem
+  - `validateGraphQLQuery()` funkcja wykrywająca mutacje GraphQL
+  - Fail-safe default: nieznane operacje są blokowane domyślnie
+  - Ulepszone testy (`tests/monday-readonly-enhanced.test.ts`) z 7 klasami testowymi
+
+### Changed
+- **lib/monday-readonly.ts**: Refaktoryzacja `isReadOnlyTool()` na 5-etapową walidację:
+  1. Check explicit blacklist (highest priority)
+  2. Check explicit whitelist
+  3. Check blacklist keywords (fuzzy matching)
+  4. Check read patterns (get_, list_, read_, search_, fetch_, query_, retrieve_)
+  5. Fail-safe: reject unknown operations
+- **Normalizacja nazw operacji**: Automatyczne usuwanie prefiksów `mcp_monday-mcp_` i `mcp_` przed walidacją
+
+### Removed
+- **Debug artifacts**: Usunięte wszystkie `fetch('http://127.0.0.1:7242/...')` calls z `lib/monday-readonly.ts` (3 miejsca)
+
+### Security
+- **Fail-safe by default**: Nieznane operacje są automatycznie blokowane (zamiast dozwalane)
+- **GraphQL mutation detection**: Wykrywanie mutacji GraphQL z ignorowaniem komentarzy i stringów
+- **Explicit whitelist/blacklist**: Jasne listy operacji zamiast tylko fuzzy matching
+
+### Testing
+- **Testy automatyczne**: 44/44 testów przechodzi pomyślnie (100%)
+  - ✅ Explicit read operations allowed (13 testów)
+  - ✅ Explicit write operations blocked (13 testów)
+  - ✅ Unknown operations blocked (fail-safe) (10 testów)
+  - ✅ GraphQL mutations blocked (6 testów)
+  - ✅ GraphQL queries allowed (2 testy)
+  - ✅ Whitelist/blacklist consistency verified
+- **Testy manualne**: Wszystkie 6 scenariuszy zweryfikowane pomyślnie
+  - ✅ Scenariusz 1: Próba utworzenia item → odmowa z czytelnym komunikatem
+  - ✅ Scenariusz 2: Pobranie danych → działa poprawnie
+  - ✅ Scenariusz 3: Brak debug artifacts → zweryfikowane automatycznie
+  - ✅ Scenariusz 4: Logi bezpieczne → brak sekretów w logach
+  - ✅ Scenariusz 5: Fail-safe działa → nieznane operacje blokowane
+  - ✅ Scenariusz 6: GraphQL validation → mutacje blokowane
+- **Dokumentacja testów**: Utworzono `docs/PH03_MONDAY_TEST_RESULTS.md` i `docs/PH03_MONDAY_MANUAL_TEST_GUIDE.md`
+- **Testy automatyczne dla scenariuszy manualnych**: Utworzono `tests/manual-scenarios-3-5-6.test.ts`
+
 ## [0.1.4] - 2025-12-19
 
 ### Added

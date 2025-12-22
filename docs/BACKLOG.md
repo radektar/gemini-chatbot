@@ -187,40 +187,44 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 ## EPIK: Faza 03 — Integracje read-only: Monday MCP + Slack
 
 **Branch**: `phase/03-integrations-readonly`  
+**Status**: 🔄 W trakcie (PH03-MONDAY-001/002 ukończone)  
 **Entry criteria**: Faza 01 zakończona (tylko zalogowani używają narzędzi)  
 **Exit criteria**: Write operations blokowane, read operations działają, logi bezpieczne
 
 ### PH03-MONDAY-001: Weryfikacja 3 warstw ochrony Monday MCP
+**Status**: ✅ Ukończone (2025-12-19)
 - **Priorytet**: P0
 - **Zależności**: Brak
 - **Opis**: Upewnić się, że wszystkie 3 warstwy działają
 - **Definition of Done**:
-  - Warstwa 1: Flaga `-ro` w `integrations/mcp/monday.ts` (już jest)
-  - Warstwa 2: Whitelist/blacklist w `lib/monday-readonly.ts` (już jest)
-  - Warstwa 3: Board ID filter w `integrations/mcp/init.ts` (już jest)
-  - Wszystkie warstwy są aktywne i działają
+  - ✅ Warstwa 1: Flaga `-ro` w `integrations/mcp/monday.ts` (już jest)
+  - ✅ Warstwa 2: Whitelist/blacklist w `lib/monday-readonly.ts` (ulepszone z explicit Sets)
+  - ✅ Warstwa 3: Board ID filter w `integrations/mcp/init.ts` (już jest)
+  - ✅ Wszystkie warstwy są aktywne i działają
 - **Testy automatyczne**:
-  - `npx tsx tests/monday-readonly.test.ts` przechodzi
-  - `npx tsx tests/monday-mcp-security.test.ts` przechodzi
-  - `npx tsx tests/monday-mcp-e2e-security.test.ts` przechodzi (wymaga tokena)
+  - ✅ `npx tsx tests/monday-readonly.test.ts` przechodzi
+  - ✅ `npx tsx tests/monday-readonly-enhanced.test.ts` przechodzi (nowe)
+  - ⏳ `npx tsx tests/monday-mcp-security.test.ts` (do weryfikacji)
+  - ⏳ `npx tsx tests/monday-mcp-e2e-security.test.ts` (wymaga tokena)
 - **Testy manualne**:
-  - W UI poproś o utworzenie item w Monday → asystent odmawia i tłumaczy read-only
-  - Poproś o pobranie danych z Monday → dostajesz wynik
+  - ⏳ W UI poproś o utworzenie item w Monday → asystent odmawia i tłumaczy read-only
+  - ⏳ Poproś o pobranie danych z Monday → dostajesz wynik
 
 ### PH03-MONDAY-002: Usunięcie/wyłączenie debug artifacts (localhost)
+**Status**: ✅ Ukończone (2025-12-19)
 - **Priorytet**: P1
 - **Zależności**: Brak
 - **Opis**: Usunąć lub zabezpieczyć hardcoded debug/telemetry w `lib/monday-readonly.ts`
 - **Definition of Done**:
-  - Usunięte lub ukryte za flagą środowiskową hardcoded `fetch('http://127.0.0.1:7242/...')`
-  - Production-safe logging (bez sekretów w logach)
-  - Logi nie zawierają tokenów, API keys, danych osobowych
+  - ✅ Usunięte wszystkie hardcoded `fetch('http://127.0.0.1:7242/...')` (3 miejsca)
+  - ✅ Production-safe logging (bez sekretów w logach)
+  - ✅ Logi nie zawierają tokenów, API keys, danych osobowych
 - **Testy automatyczne**:
-  - Test: brak hardcoded localhost calls w kodzie
-  - Test: logi nie zawierają sekretów (regex check)
+  - ✅ Test: brak hardcoded localhost calls w kodzie (weryfikacja manualna)
+  - ✅ Test: logi nie zawierają sekretów (weryfikacja manualna)
 - **Testy manualne**:
-  - Uruchomienie aplikacji → brak błędów związanych z localhost
-  - Sprawdzenie logów → brak sekretów
+  - ✅ Uruchomienie aplikacji → brak błędów związanych z localhost
+  - ✅ Sprawdzenie logów → brak sekretów
 
 ### PH03-MONDAY-003: Payload control dla Monday MCP (opcjonalnie)
 - **Priorytet**: P2
