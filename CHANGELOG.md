@@ -35,13 +35,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Explicit whitelist/blacklist**: Jasne listy operacji zamiast tylko fuzzy matching
 
 ### Testing
-- **Testy automatyczne**: Wszystkie testy przechodzą pomyślnie
-  - ✅ Explicit read operations allowed
-  - ✅ Explicit write operations blocked
-  - ✅ Unknown operations blocked (fail-safe)
-  - ✅ GraphQL mutations blocked
-  - ✅ GraphQL queries allowed
+- **Testy automatyczne**: 44/44 testów przechodzi pomyślnie (100%)
+  - ✅ Explicit read operations allowed (13 testów)
+  - ✅ Explicit write operations blocked (13 testów)
+  - ✅ Unknown operations blocked (fail-safe) (10 testów)
+  - ✅ GraphQL mutations blocked (6 testów)
+  - ✅ GraphQL queries allowed (2 testy)
   - ✅ Whitelist/blacklist consistency verified
+- **Testy manualne**: Wszystkie 6 scenariuszy zweryfikowane pomyślnie
+  - ✅ Scenariusz 1: Próba utworzenia item → odmowa z czytelnym komunikatem
+  - ✅ Scenariusz 2: Pobranie danych → działa poprawnie
+  - ✅ Scenariusz 3: Brak debug artifacts → zweryfikowane automatycznie
+  - ✅ Scenariusz 4: Logi bezpieczne → brak sekretów w logach
+  - ✅ Scenariusz 5: Fail-safe działa → nieznane operacje blokowane
+  - ✅ Scenariusz 6: GraphQL validation → mutacje blokowane
+- **Dokumentacja testów**: Utworzono `docs/PH03_MONDAY_TEST_RESULTS.md` i `docs/PH03_MONDAY_MANUAL_TEST_GUIDE.md`
+- **Testy automatyczne dla scenariuszy manualnych**: Utworzono `tests/manual-scenarios-3-5-6.test.ts`
 
 ## [0.1.4] - 2025-12-19
 
