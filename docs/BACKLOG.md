@@ -187,7 +187,7 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 ## EPIK: Faza 03 — Integracje read-only: Monday MCP + Slack
 
 **Branch**: `phase/03-integrations-readonly`  
-**Status**: 🔄 W trakcie (PH03-MONDAY-001/002 ukończone)  
+**Status**: ✅ Ukończone (2025-12-22) - PH03-MONDAY-001/002 i PH03-SLACK-001/002 ukończone  
 **Entry criteria**: Faza 01 zakończona (tylko zalogowani używają narzędzi)  
 **Exit criteria**: Write operations blokowane, read operations działają, logi bezpieczne
 
@@ -241,29 +241,34 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
   - Zapytanie o duży board → odpowiedź zawiera summary + przykłady, nie dump wszystkich danych
 
 ### PH03-SLACK-001: Konfiguracja Slack read-only
+**Status**: ✅ Ukończone (2025-12-22)
 - **Priorytet**: P1
 - **Zależności**: PH01-AUTH-002
 - **Opis**: Skonfigurować Slack integration jako read-only
 - **Definition of Done**:
-  - Slack tools mają minimal scopes: `channels:read`, `channels:history`
-  - Brak write permissions
-  - Spójny log/audit dla Slack API calls
+  - ✅ Slack tools mają minimal scopes: `channels:read`, `channels:history`
+  - ✅ Brak write permissions (explicit blacklist w `lib/slack-readonly.ts`)
+  - ✅ Spójny log/audit dla Slack API calls (audit logging w `client.ts`)
+  - ✅ Tylko publiczne kanały dostępne (prywatne, DM, mpim zablokowane)
+  - ✅ Opcjonalny whitelist (`SLACK_ALLOWED_CHANNELS`)
 - **Testy automatyczne**:
-  - Test: Slack tools nie mają write operations
-  - Test: Slack API calls są logowane
+  - ✅ Test: Slack tools nie mają write operations (`tests/slack-readonly.test.ts`)
+  - ✅ Test: Slack API calls są logowane (audit logging)
 - **Testy manualne**:
-  - Poproś o Slack search → dostajesz wynik (jeśli integracja aktywna)
-  - Poproś o wysłanie wiadomości → odmowa (jeśli próba write)
+  - ⏳ Poproś o Slack search → dostajesz wynik (jeśli integracja aktywna)
+  - ⏳ Poproś o wysłanie wiadomości → odmowa (jeśli próba write)
 
 ### PH03-SLACK-002: Testy automatyczne Slack security
+**Status**: ✅ Ukończone (2025-12-22)
 - **Priorytet**: P2
 - **Zależności**: PH03-SLACK-001
 - **Opis**: Dodać testy security dla Slack (analogiczne do Monday)
 - **Definition of Done**:
-  - Plik `tests/slack-readonly.test.ts` istnieje
-  - Test: write operations są blokowane
-  - Test: read operations działają
-- **Testy automatyczne**: `npx tsx tests/slack-readonly.test.ts` przechodzi
+  - ✅ Plik `tests/slack-readonly.test.ts` istnieje
+  - ✅ Test: write operations są blokowane (12 testów, wszystkie przechodzą)
+  - ✅ Test: read operations działają
+  - ✅ Test: channel access validation (public allowed, private/DM/mpim blocked)
+- **Testy automatyczne**: ✅ `npx tsx tests/slack-readonly.test.ts` przechodzi (12/12 testów)
 - **Testy manualne**: N/A
 
 ---
