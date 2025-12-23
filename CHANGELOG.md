@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **app/(chat)/api/chat/route.ts**: System prompt wymaga formatowania odpowiedzi z sekcjami Wyniki/Źródła/Do potwierdzenia
 - **ai/plan-generator.ts**: Dodano informację o wymaganym formacie odpowiedzi z sekcjami
+- **ai/intent-extraction.ts**: Rygorystyczny filtr confidence - ważona średnia zamiast prostej średniej
+  - DataSources confidence ma wagę 50% (najważniejsze)
+  - Ogólne zapytania bez filtrów (np. "Pokaż projekty") → dataSources.confidence < 0.4 → averageConfidence < 0.6
+  - System pyta o doprecyzowanie dla zapytań bez filtrów zamiast generować plan dla wszystkich projektów
+  - Dodatkowa korekta: jeśli dataSources.confidence < 0.4, averageConfidence jest ograniczona do max 0.55
 
 ### Testing
 - **Testy automatyczne**: 30/30 testów przechodzi pomyślnie (100%)
