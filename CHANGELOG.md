@@ -23,8 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Testy automatyczne**: 30/30 testów przechodzi pomyślnie (100%)
   - Evidence validator tests (17 testów)
   - Evidence format tests (13 testów)
-- **Testy manualne**: Do weryfikacji (3 scenariusze z BACKLOG)
-  - ⏳ Poproś o metrykę z Monday → odpowiedź zawiera sekcję "Źródła" z linkiem
+- **Testy manualne**: 1/3 scenariuszy zweryfikowane pomyślnie
+  - ✅ Poproś o metrykę z Monday → odpowiedź zawiera sekcję "Źródła" z linkiem (zweryfikowane: sekcja obecna, link klikalny, ID itemu widoczne)
   - ⏳ Poproś o dane bez źródła → odpowiedź zawiera sekcję "Do potwierdzenia"
   - ⏳ Poproś o narrację → liczby mają źródła, elementy bez źródeł oznaczone
 
