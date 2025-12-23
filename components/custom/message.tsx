@@ -61,43 +61,6 @@ export const Message = ({
           </div>
         )}
 
-        {toolInvocations && (
-          <div className="flex flex-col gap-2">
-            {toolInvocations.map((toolInvocation) => {
-              const { toolName, toolCallId, state } = toolInvocation;
-
-              // Only show loading indicator, hide results completely
-              if (state !== "result") {
-                const toolLabels: Record<string, string> = {
-                  list_boards: "Szukam tablic w Monday.com...",
-                  listMondayBoards: "Szukam tablic w Monday.com...",
-                  get_board_items: "Pobieram zadania...",
-                  get_item_details: "Analizuję szczegóły...",
-                  getMondayTasks: "Pobieram zadania...",
-                  getMondayTaskDetails: "Analizuję szczegóły...",
-                  search_items_by_column_value: "Przeszukuję dane...",
-                  searchSlackHistory: "Przeszukuję Slack...",
-                  getSlackChannels: "Pobieram kanały Slack...",
-                  getWeather: "Sprawdzam pogodę...",
-                };
-
-                return (
-                  <div
-                    key={toolCallId}
-                    className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse"
-                  >
-                    <div className="size-2 bg-blue-500 rounded-full animate-ping" />
-                    {toolLabels[toolName] || "Analizuję..."}
-                  </div>
-                );
-              }
-
-              // Hide results when complete - the model's text response will contain the processed info
-              return null;
-            })}
-          </div>
-        )}
-
         {attachments && (
           <div className="flex flex-row gap-2">
             {attachments.map((attachment) => (

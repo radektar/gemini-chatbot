@@ -3,7 +3,15 @@
 import { motion } from "framer-motion";
 import { BotIcon } from "./icons";
 
-export const TypingIndicator = () => {
+type Phase = "analyzing" | "fetching" | "preparing";
+
+export const TypingIndicator = ({ phase = "analyzing" }: { phase?: Phase }) => {
+  const phaseLabels: Record<Phase, string> = {
+    analyzing: "Analizuję zapytanie...",
+    fetching: "Pobieram dane...",
+    preparing: "Przygotowuję odpowiedź...",
+  };
+
   return (
     <motion.div
       className="flex flex-row gap-4 px-4 w-full md:w-[500px] md:px-0"
@@ -38,7 +46,7 @@ export const TypingIndicator = () => {
               ease: "easeInOut",
             }}
           >
-            Analizuję zapytanie...
+            {phaseLabels[phase]}
           </motion.span>
         </div>
       </div>

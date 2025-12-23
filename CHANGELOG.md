@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2025-12-23
+
+### Changed
+- **Dynamiczny status indicator**: Zastąpienie szczegółowych komunikatów o krokach przetwarzania jednym dynamicznym wskaźnikiem statusu
+  - **components/custom/typing-indicator.tsx**: Rozszerzono o prop `phase` z trzema fazami: "analyzing" → "Analizuję zapytanie...", "fetching" → "Pobieram dane...", "preparing" → "Przygotowuję odpowiedź..."
+  - **components/custom/chat.tsx**: Dodano funkcję `getLoadingPhase()` określającą aktualną fazę na podstawie stanu tool invocations i wiadomości
+  - **components/custom/message.tsx**: Usunięto szczegółowe komunikaty dla każdego toolInvocation (np. "Szukam tablic w Monday.com...", "Pobieram zadania...")
+  - Użytkownik widzi teraz tylko jeden, płynnie zmieniający się status zamiast listy szczegółowych kroków
+
 ## [0.2.1] - 2025-12-23
 
 ### Added

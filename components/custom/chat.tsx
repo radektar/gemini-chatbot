@@ -33,6 +33,31 @@ export function Chat({
 
   const [attachments, setAttachments] = useState<Array<Attachment>>([]);
 
+  type Phase = "analyzing" | "fetching" | "preparing";
+
+  const getLoadingPhase = (): Phase => {
+    const lastMessage = messages[messages.length - 1];
+
+    // Faza 2: Aktywne tool invocations
+    if (lastMessage?.role === "assistant" && lastMessage.toolInvocations?.length) {
+      const hasActiveTools = lastMessage.toolInvocations.some(
+        (inv) => inv.state !== "result"
+      );
+      if (hasActiveTools) return "fetching";
+    }
+
+    // Faza 3: Tools zakończone, treść w trakcie generowania
+    if (lastMessage?.role === "assistant" && lastMessage.toolInvocations?.length) {
+      const allToolsDone = lastMessage.toolInvocations.every(
+        (inv) => inv.state === "result"
+      );
+      if (allToolsDone) return "preparing";
+    }
+
+    // Faza 1: Początek analizy
+    return "analyzing";
+  };
+
   return (
     <div className="flex flex-row justify-center pb-4 md:pb-8 h-dvh bg-background">
       <div className="flex flex-col justify-between items-center gap-4">
@@ -95,15 +120,18 @@ export function Chat({
             );
           })}
 
-          {/* Show typing indicator when loading and no assistant message yet or last message is empty */}
+          {/* Show typing indicator when loading and no assistant message yet or last message is empty or has active tool invocations */}
           {isLoading && (() => {
             const lastMessage = messages[messages.length - 1];
+            const hasActiveToolInvocations = lastMessage?.role === "assistant" && 
+              lastMessage.toolInvocations?.some((inv) => inv.state !== "result");
             const shouldShowIndicator = 
               !lastMessage || 
               lastMessage.role !== "assistant" || 
-              (typeof lastMessage.content === "string" && lastMessage.content.trim() === "");
+              (typeof lastMessage.content === "string" && lastMessage.content.trim() === "") ||
+              hasActiveToolInvocations;
             
-            return shouldShowIndicator ? <TypingIndicator /> : null;
+            return shouldShowIndicator ? <TypingIndicator phase={getLoadingPhase()} /> : null;
           })()}
 
           <div
