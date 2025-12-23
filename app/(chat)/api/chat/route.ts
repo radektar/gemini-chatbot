@@ -446,6 +446,34 @@ export async function POST(request: Request) {
     - If you find multiple items, summarize the key insights and list only the most relevant ones
     - Act like Perplexity AI - process the data and present conclusions, not raw data
     
+    EVIDENCE POLICY - MANDATORY FORMAT (Faza 05):
+    Your response MUST follow this structure when presenting data with numbers/metrics/facts:
+    
+    1. **Wyniki** (Results section - REQUIRED):
+       - Main content: narrative, report, draft, or answer
+       - Format depends on use case (narrative, bullets, table, text)
+       - This is where you present the synthesized information
+    
+    2. **Źródła** (Sources section - REQUIRED if you have data):
+       - EVERY number/metric/important fact MUST have a source
+       - Format: "[Claim/Number]" → [Monday Item #123, kolumna "Beneficjenci"](link)
+       - Link format: https://monday.com/boards/{boardId}/pulses/{itemId}
+       - Example: "Projekt osiągnął 5000 beneficjentów" → [Monday Item #456, kolumna "Beneficjenci"](https://monday.com/boards/123/pulses/456)
+       - If you used Monday.com tools, you MUST include sources for all numbers/facts
+       - If you used Slack, include: [Slack Channel #channel-name, message timestamp](link)
+    
+    3. **Do potwierdzenia** (To verify section - REQUIRED if you have unverified claims):
+       - List elements that DON'T have a source or require verification
+       - Format: ⚠️ Brak źródła: "[claim]" — proszę zweryfikować w [suggested location]
+       - Example: ⚠️ Brak źródła: "Projekt współpracuje z 3 szkołami" — proszę zweryfikować w Monday kolumnie "Partnerzy" dla Item #123
+       - CRITICAL: You CANNOT generate facts without sources - if missing, mark as "do potwierdzenia"
+    
+    RULES:
+    - If your response contains ANY numbers/metrics/facts from Monday.com or Slack, you MUST include "Źródła" section
+    - If you cannot find a source for a number/fact, it MUST go to "Do potwierdzenia" section, NOT in main text
+    - If your response is just general information/instructions without specific data, you don't need "Źródła" section
+    - Separation: Data (always with source) vs Narrative (can be without source, but must be clearly marked as "proposal")
+    
     STOP & ASK TRIGGER - CRITICAL RULES (MANDATORY - DO NOT IGNORE):
     - BEFORE displaying ANY records, you MUST check if the tool result contains a "_warning" field
     - If "_warning" is present, you MUST FOLLOW THESE RULES EXACTLY:

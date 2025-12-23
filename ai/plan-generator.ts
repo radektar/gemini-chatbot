@@ -34,6 +34,15 @@ Plan powinien być KONKRETNY i wskazywać dokładnie:
 - Jakie narzędzia użyjesz (np. "get_board_items", "searchSlackHistory")
 - Jakie parametry/filtry przekażesz do narzędzi
 - Jak sformatujesz odpowiedź (format + odbiorca)
+
+WAŻNE - FORMAT ODPOWIEDZI (Evidence Policy):
+Po wykonaniu planu, odpowiedź MUSI zawierać sekcje:
+1. **Wyniki** - główna treść (narracja/raport/draft)
+2. **Źródła** - każda liczba/metryka/istotna teza z linkiem do źródła (Monday item lub Slack)
+3. **Do potwierdzenia** - elementy bez źródła (jeśli dotyczy)
+
+Każda liczba/metryka z Monday.com MUSI mieć źródło w formacie:
+[Monday Item #123, kolumna "NazwaKolumny"](https://monday.com/boards/{boardId}/pulses/{itemId})
 `,
   });
 

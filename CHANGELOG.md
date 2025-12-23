@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-12-23
+
+### Added
+- **Faza 05 - Evidence Policy**: Implementacja polityki dowodów zgodnie z BACKLOG PH05-EVIDENCE-001/002/003
+  - Format odpowiedzi z sekcjami: Wyniki / Źródła / Do potwierdzenia
+  - Walidator evidence dla liczb/metryk (`ai/evidence-validator.ts`)
+  - Generator linków do Monday items (`lib/monday-link-generator.ts`)
+  - Każda liczba/metryka musi mieć źródło lub być oznaczona "do potwierdzenia"
+  - System prompt wymaga formatowania odpowiedzi z sekcjami zgodnie z Evidence Policy
+
+### Changed
+- **app/(chat)/api/chat/route.ts**: System prompt wymaga formatowania odpowiedzi z sekcjami Wyniki/Źródła/Do potwierdzenia
+- **ai/plan-generator.ts**: Dodano informację o wymaganym formacie odpowiedzi z sekcjami
+
+### Testing
+- **Testy automatyczne**: 30/30 testów przechodzi pomyślnie (100%)
+  - Evidence validator tests (17 testów)
+  - Evidence format tests (13 testów)
+- **Testy manualne**: Do weryfikacji (3 scenariusze z BACKLOG)
+  - ⏳ Poproś o metrykę z Monday → odpowiedź zawiera sekcję "Źródła" z linkiem
+  - ⏳ Poproś o dane bez źródła → odpowiedź zawiera sekcję "Do potwierdzenia"
+  - ⏳ Poproś o narrację → liczby mają źródła, elementy bez źródeł oznaczone
+
 ## [0.2.0] - 2025-12-23
 
 ### Added
