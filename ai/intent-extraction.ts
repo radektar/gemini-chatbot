@@ -32,62 +32,62 @@ export async function extractIntent(userMessage: string): Promise<QueryContext> 
     model: geminiProModel,
     schema: QueryContextSchema,
     prompt: `
-Jesteś ekspertem od ekstrakcji intencji z zapytań użytkowników. Przeanalizuj poniższe zapytanie i wyekstrahuj wszystkie dostępne informacje, przypisując każdemu elementowi poziom pewności (confidence) od 0 do 1.
+You are an expert at extracting intent from user queries. Analyze the following query and extract all available information, assigning a confidence level (0-1) to each element.
 
-Zapytanie użytkownika: "${userMessage}"
+User query: "${userMessage}"
 
-Wyekstrahuj:
-1. **Intent (intencja)**: 
-   - action: co użytkownik chce zrobić? (find, analyze, generate, compare, summarize, explain)
-   - object: czego dotyczy zapytanie? (np. "projekt", "metryka", "mail", "raport")
-   - confidence: jak pewny jesteś interpretacji? (0-1)
+Extract:
+1. **Intent**: 
+   - action: what does the user want to do? (find, analyze, generate, compare, summarize, explain)
+   - object: what is the query about? (e.g., "project", "metric", "email", "report")
+   - confidence: how confident are you in the interpretation? (0-1)
 
-2. **DataSources (źródła danych)**:
-   - primary: skąd brać dane? (monday, slack, impactlog, unknown)
-   - filters: jakie filtry zastosować? (geography, status, timeRange, etc.)
-   - confidence: jak pewny jesteś co do źródła? (0-1)
+2. **DataSources**:
+   - primary: where to get data from? (monday, slack, impactlog, unknown)
+   - filters: what filters to apply? (geography, status, timeRange, etc.)
+   - confidence: how confident are you about the data source? (0-1)
 
-3. **Audience (odbiorca)**:
-   - type: dla kogo? (donor, partner, internal, unknown)
-   - purpose: jaki cel? (np. "spotkanie", "raport", "pitch")
-   - confidence: jak pewny jesteś co do odbiorcy? (0-1)
+3. **Audience**:
+   - type: for whom? (donor, partner, internal, unknown)
+   - purpose: what is the purpose? (e.g., "meeting", "report", "pitch")
+   - confidence: how confident are you about the audience? (0-1)
 
-4. **Output (format wyjściowy)**:
-   - format: jaki format? (narrative, bullets, table, email, raw)
-   - length: jaka długość? (short, medium, long)
-   - confidence: jak pewny jesteś co do formatu? (0-1)
+4. **Output**:
+   - format: what format? (narrative, bullets, table, email, raw)
+   - length: what length? (short, medium, long)
+   - confidence: how confident are you about the format? (0-1)
 
-5. **averageConfidence**: średnia z wszystkich confidence scores (będzie przeliczona z wagami w kodzie)
+5. **averageConfidence**: average of all confidence scores (will be recalculated with weights in code)
 
-WAŻNE - RYGORYSTYCZNE ZASADY CONFIDENCE:
+IMPORTANT - STRICT CONFIDENCE RULES:
 
-1. **DataSources confidence** - KRYTYCZNE dla zapytań o projekty/dane:
-   - Jeśli zapytanie dotyczy projektów/danych z Monday.com:
-     * BRAK FILTRÓW (geografia, status, temat, okres) → confidence MUSI być < 0.4
-     * Tylko 1 filtr → confidence < 0.5
-     * 2-3 filtry → confidence 0.5-0.7
-     * 4+ filtry lub bardzo konkretne → confidence >= 0.7
-   - Ogólne zapytania typu "pokaż projekty", "znajdź projekty", "pokaż wszystkie projekty" BEZ filtrów → confidence < 0.4
-   - Jeśli primary = "unknown" → confidence < 0.3
-   - Jeśli primary = "monday" ale brak filtrów dla zapytań o projekty → confidence < 0.4
+1. **DataSources confidence** - CRITICAL for queries about projects/data:
+   - If the query is about projects/data from Monday.com:
+     * NO FILTERS (geography, status, theme, time period) → confidence MUST be < 0.4
+     * Only 1 filter → confidence < 0.5
+     * 2-3 filters → confidence 0.5-0.7
+     * 4+ filters or very specific → confidence >= 0.7
+   - General queries like "show projects", "find projects", "show all projects" WITHOUT filters → confidence < 0.4
+   - If primary = "unknown" → confidence < 0.3
+   - If primary = "monday" but no filters for project queries → confidence < 0.4
 
 2. **Intent confidence**:
-   - Ogólne akcje ("find", "show", "pokaż") bez kontekstu → confidence < 0.6
-   - Konkretne akcje z kontekstem ("find projects in Kenya", "znajdź projekty edukacyjne") → confidence >= 0.7
+   - General actions ("find", "show") without context → confidence < 0.6
+   - Specific actions with context ("find projects in Kenya", "find educational projects") → confidence >= 0.7
 
 3. **Audience confidence**:
-   - Jeśli type = "unknown" → confidence < 0.3
-   - Jeśli brak purpose → confidence < 0.5
+   - If type = "unknown" → confidence < 0.3
+   - If purpose is missing → confidence < 0.5
 
 4. **Output confidence**:
-   - Jeśli format nie jest określony → confidence < 0.5
+   - If format is not specified → confidence < 0.5
 
-5. **Przykłady oceny**:
-   - "Pokaż projekty" → dataSources.confidence < 0.4 (brak filtrów), intent.confidence < 0.6 (ogólne)
-   - "Znajdź projekty edukacyjne w Kenii" → dataSources.confidence >= 0.7 (2 filtry: temat + geografia), intent.confidence >= 0.7
-   - "Ile beneficjentów ma projekt X?" → dataSources.confidence >= 0.7 (konkretny projekt), intent.confidence >= 0.7
+5. **Evaluation examples**:
+   - "Show projects" → dataSources.confidence < 0.4 (no filters), intent.confidence < 0.6 (general)
+   - "Find educational projects in Kenya" → dataSources.confidence >= 0.7 (2 filters: theme + geography), intent.confidence >= 0.7
+   - "How many beneficiaries does project X have?" → dataSources.confidence >= 0.7 (specific project), intent.confidence >= 0.7
 
-PAMIĘTAJ: Bądź RYGORYSTYCZNY - lepiej mieć zbyt niską confidence niż zbyt wysoką dla niejasnych zapytań!
+REMEMBER: Be STRICT - it's better to have too low confidence than too high for unclear queries!
 `,
   });
 
