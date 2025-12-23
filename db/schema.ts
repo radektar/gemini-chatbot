@@ -7,6 +7,8 @@ import {
   json,
   uuid,
   index,
+  integer,
+  text,
 } from "drizzle-orm/pg-core";
 
 export const user = pgTable("User", {
@@ -37,3 +39,23 @@ export const chat = pgTable("Chat", {
 export type Chat = Omit<InferSelectModel<typeof chat>, "messages"> & {
   messages: Array<Message>;
 };
+
+export const messageFeedback = pgTable("MessageFeedback", {
+  id: uuid("id").primaryKey().notNull().defaultRandom(),
+  chatId: uuid("chatId").references(() => chat.id, { onDelete: "cascade" }),
+  userId: uuid("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+  messageId: varchar("messageId", { length: 255 }),
+  rating: integer("rating").notNull(), // 1 lub -1
+  comment: text("comment"),
+  userQuery: text("userQuery"),
+  assistantResponse: text("assistantResponse"),
+  toolsUsed: json("toolsUsed"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
+}, (table) => ({
+  chatIdIdx: index("feedback_chatId_idx").on(table.chatId),
+  userIdIdx: index("feedback_userId_idx").on(table.userId),
+  ratingIdx: index("feedback_rating_idx").on(table.rating),
+  createdAtIdx: index("feedback_createdAt_idx").on(table.createdAt),
+}));
+
+export type MessageFeedback = InferSelectModel<typeof messageFeedback>;

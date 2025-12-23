@@ -273,87 +273,172 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 
 ---
 
-## EPIK: Faza 04 — Plan-first (ask-before-act)
+## EPIK: Faza 04 — Plan-first (ask-before-act) + Feedback Loop
 
 **Branch**: `phase/04-plan-first`  
 **Entry criteria**: Faza 03 zakończona (narzędzia dostępne)  
-**Exit criteria**: System zadaje pytania przy brakujących must-have, tool calls tylko po potwierdzeniu
+**Exit criteria**: 
+- System elastycznie obsługuje różne typy zapytań (nie tylko UC-01/02/03)
+- Przy niskiej pewności (confidence < 0.7): system pyta zamiast zgadywać
+- Plan jest zawsze prezentowany przed tool calls
+- Użytkownik może ocenić odpowiedź (👍/👎), feedback zapisywany do DB
 
-### PH04-PLAN-001: Slot extraction dla UC-01 (Deal Enablement)
+---
+
+### CZĘŚĆ A: Intent + Confidence Architecture
+
+### PH04-INTENT-001: Uniwersalny QueryContext i slot extraction
 - **Priorytet**: P0
 - **Zależności**: Brak
-- **Opis**: Implementacja slot extraction dla UC-01 zgodnie z USE_CASES.md
+- **Opis**: Implementacja elastycznego meta-schematu zamiast hardcoded UC slots
 - **Definition of Done**:
-  - Ekstrakcja slotów: `geography` (must-have), `theme` (must-have), `audience` (must-have), `timeRange` (optional), `outputFormat` (optional), `meetingContext` (optional)
-  - Jeśli must-have slot brakuje → system zadaje pytanie
-  - Jeśli slot jest w promptcie → ekstraktuje i pomija pytanie
+  - Interface `QueryContext` z polami: `intent`, `dataSources`, `audience`, `output`
+  - Każde pole ma `confidence: number` (0-1)
+  - Prompt do ekstrakcji slotów z dowolnego zapytania (nie per-UC)
+  - Ekstrakcja działa dla UC-01/02/03 oraz nowych przypadków
 - **Testy automatyczne**:
-  - Test: parser slotów ekstraktuje geografię z promptu
-  - Test: parser slotów wykrywa brak must-have slotów
-  - Test: parser slotów używa wartości domyślnych dla optional
+  - Test: ekstrakcja intent z promptu "Znajdź projekt" → action: "find", confidence: 1.0
+  - Test: ekstrakcja z niejasnego promptu → confidence < 0.5
+  - Test: ekstrakcja audience z "dla donora" → type: "donor", confidence: 1.0
 - **Testy manualne**:
-  - Wpisz "Znajdź projekt dla donora" bez geografii → dostajesz pytanie o geografię
-  - Wpisz "Znajdź projekt w Kenii o edukacji" → geografia i temat ekstraktowane, brak pytań
+  - Wpisz "Znajdź projekt edukacyjny w Kenii" → wszystkie sloty z wysoką confidence
+  - Wpisz "Coś o projektach" → niska confidence, system pyta o doprecyzowanie
 
-### PH04-PLAN-002: Slot extraction dla UC-02 (Ad-hoc Reporting)
+### PH04-INTENT-002: Confidence-based prompting
 - **Priorytet**: P0
-- **Zależności**: PH04-PLAN-001
-- **Opis**: Implementacja slot extraction dla UC-02
+- **Zależności**: PH04-INTENT-001
+- **Opis**: System pyta tylko gdy confidence < threshold (0.7)
 - **Definition of Done**:
-  - Ekstrakcja slotów: `metric` (must-have), `metricDefinition` (jeśli niejednoznaczna), `filters` (optional), `outputFormat` (optional)
-  - Jeśli metryka niejednoznaczna → system zadaje o precyzję
+  - Threshold confidence = 0.7 (konfigurowalny)
+  - Jeśli confidence >= 0.7 dla wszystkich critical slots → kontynuuj bez pytań
+  - Jeśli confidence < 0.7 dla critical slot → zadaj pytanie
+  - Jeśli confidence < 0.3 dla intent → zapytaj o intencję
 - **Testy automatyczne**:
-  - Test: parser wykrywa niejednoznaczne metryki
-  - Test: parser ekstraktuje filtry z promptu
+  - Test: wysokie confidence → brak pytań
+  - Test: niskie confidence → pytanie o doprecyzowanie
+  - Test: bardzo niskie confidence intent → pytanie o intencję
 - **Testy manualne**:
-  - Wpisz "ile projektów" → metryka ekstraktowana
-  - Wpisz "jaki progres" → system pyta o precyzję (progres = % KPI vs liczba beneficjentów)
+  - Wpisz jasne zapytanie → system nie pyta, pokazuje plan
+  - Wpisz niejasne zapytanie → system pyta zanim pokaże plan
 
-### PH04-PLAN-003: Slot extraction dla UC-03 (Draft Mail)
+### PH04-INTENT-003: Plan generation i prezentacja
 - **Priorytet**: P0
-- **Zależności**: PH04-PLAN-001
-- **Opis**: Implementacja slot extraction dla UC-03
-- **Definition of Done**:
-  - Ekstrakcja slotów: `recipient` (must-have), `purpose` (must-have), `projects` (must-have), `tone` (optional), `language` (optional), `callToAction` (optional)
-- **Testy automatyczne**:
-  - Test: parser ekstraktuje recipient i purpose
-  - Test: parser wykrywa brak must-have slotów
-- **Testy manualne**:
-  - Wpisz "Wygeneruj mail" bez odbiorcy → dostajesz pytanie o odbiorcę
-  - Wpisz "Wygeneruj mail dla organizacji X jako follow-up" → recipient i purpose ekstraktowane
-
-### PH04-PLAN-004: Plan generation i prezentacja
-- **Priorytet**: P0
-- **Zależności**: PH04-PLAN-001, PH04-PLAN-002, PH04-PLAN-003
+- **Zależności**: PH04-INTENT-002
 - **Opis**: Generowanie czytelnego planu działania przed tool calls
 - **Definition of Done**:
-  - System generuje plan: "Planuję: 1) wyszukać projekty w X z tagiem Y, 2) wygenerować narrację, 3) dodać źródła"
-  - Plan jest prezentowany użytkownikowi w czytelnej formie
+  - System generuje plan na podstawie QueryContext
+  - Plan zawiera: co zrobi, jakie narzędzia użyje, jakie filtry
+  - Format: "Mój plan: 1) ... 2) ... Doprecyzuj jeśli chcesz: ..."
   - System czeka na potwierdzenie przed uruchomieniem tool calls
 - **Testy automatyczne**:
-  - Test: plan generation dla UC-01/02/03
+  - Test: plan generation z QueryContext
   - Test: plan zawiera wszystkie kroki działania
 - **Testy manualne**:
-  - Po uzupełnieniu slotów → dostajesz plan działania
+  - Po ekstrakcji slotów → dostajesz plan działania
   - Po potwierdzeniu → system uruchamia tool calls
-  - Bez potwierdzenia → tool calls nie są uruchamiane
+  - Możesz edytować plan przed potwierdzeniem
 
-### PH04-PLAN-005: Stop & ask triggers
+### PH04-INTENT-004: Generic stop & ask triggers
 - **Priorytet**: P1
-- **Zależności**: PH04-PLAN-004
-- **Opis**: Implementacja triggerów "stop & ask" zgodnie z USE_CASES.md
+- **Zależności**: PH04-INTENT-003
+- **Opis**: Uniwersalne triggery "stop & ask" (nie per-UC)
 - **Definition of Done**:
-  - Brak must-have slotów → system nie uruchamia tool calls, tylko zadaje pytania
-  - Wieloznaczność metryki/definicji → system pyta o precyzję
-  - Wieloznaczność boardu/źródła → system pyta o wybór
-  - Zbyt duży zakres danych → system prosi o zawężenie
-  - Niska pewność interpretacji → system pyta o potwierdzenie intencji
+  - Trigger: intent.confidence < 0.5 → pytaj o intencję
+  - Trigger: dataSources.confidence < 0.5 → pytaj o źródło danych
+  - Trigger: ambiguous metric/term → pytaj o definicję
+  - Trigger: data scope too large (>100 records) → pytaj o zawężenie
+  - Trigger: average confidence < 0.4 → pytaj o doprecyzowanie całości
 - **Testy automatyczne**:
-  - Test: brak must-have → brak tool calls
-  - Test: wieloznaczność → pytanie o precyzję
+  - Test: każdy trigger działa poprawnie
+  - Test: kombinacja triggerów (np. niski intent + niski scope)
 - **Testy manualne**:
   - Wpisz niejednoznaczne zapytanie → system pyta o doprecyzowanie
   - Wpisz zapytanie zbyt szerokie → system prosi o zawężenie
+
+---
+
+### CZĘŚĆ B: Feedback Loop (ocena odpowiedzi)
+
+### PH04-FEEDBACK-001: Schemat DB dla feedbacku (MessageFeedback)
+- **Priorytet**: P0
+- **Zależności**: Brak
+- **Opis**: Tabela do przechowywania ocen odpowiedzi AI
+- **Definition of Done**:
+  - Tabela `MessageFeedback` w `db/schema.ts`
+  - Pola: id, chatId, userId, messageId, rating (1/-1), comment, userQuery, assistantResponse, toolsUsed, createdAt
+  - Indeksy: chatId, userId, rating, createdAt
+  - Migracja Drizzle utworzona
+- **Testy automatyczne**:
+  - Test: migracja wykonuje się bez błędów
+  - Test: schemat zawiera wszystkie pola
+- **Testy manualne**:
+  - Uruchomienie `npx tsx db/migrate` → tabela utworzona
+  - Sprawdzenie schematu w DB → wszystkie pola i indeksy istnieją
+
+### PH04-FEEDBACK-002: API endpoint /api/feedback
+- **Priorytet**: P0
+- **Zależności**: PH04-FEEDBACK-001
+- **Opis**: Endpoint do zapisywania feedbacku
+- **Definition of Done**:
+  - POST `/api/feedback` zapisuje feedback do DB
+  - Walidacja: rating musi być 1 lub -1
+  - Wymaga sesji (401 bez auth)
+  - Zwraca feedbackId po zapisie
+  - GET `/api/feedback?period=7d` zwraca statystyki (opcjonalnie)
+- **Testy automatyczne**:
+  - Test: POST bez sesji → 401
+  - Test: POST z sesją i poprawnymi danymi → 200
+  - Test: POST z nieprawidłowym rating → 400
+- **Testy manualne**:
+  - POST z curl/Postman → feedback zapisany w DB
+  - Sprawdzenie DB → rekord istnieje z poprawnymi danymi
+
+### PH04-FEEDBACK-003: Komponent FeedbackButtons
+- **Priorytet**: P0
+- **Zależności**: PH04-FEEDBACK-002
+- **Opis**: UI do oceny odpowiedzi (thumbs up/down)
+- **Definition of Done**:
+  - Komponent `components/custom/feedback-buttons.tsx`
+  - Przyciski 👍 i 👎 przy odpowiedziach AI
+  - Po kliknięciu → wysyłka do `/api/feedback`
+  - Stan: idle → submitting → submitted
+  - Po 👎 → opcja dodania komentarza
+  - Animacje i feedback wizualny (check icon po zapisie)
+- **Testy automatyczne**: N/A (komponent UI)
+- **Testy manualne**:
+  - Kliknij 👍 → przycisk zmienia stan, "Dziękujemy za opinię!"
+  - Kliknij 👎 → pojawia się pole komentarza
+  - Sprawdź DB → feedback zapisany
+
+### PH04-FEEDBACK-004: Integracja FeedbackButtons z Message
+- **Priorytet**: P0
+- **Zależności**: PH04-FEEDBACK-003
+- **Opis**: Dodanie przycisków feedbacku do komponentu Message
+- **Definition of Done**:
+  - `FeedbackButtons` renderowany przy odpowiedziach assistant
+  - Tylko przy ostatniej odpowiedzi AI w konwersacji
+  - Props: chatId, messageId, userQuery, assistantResponse, toolsUsed
+  - Feedback zapisywany z pełnym kontekstem
+- **Testy automatyczne**: N/A (integracja UI)
+- **Testy manualne**:
+  - Wyślij wiadomość → odpowiedź AI ma przyciski 👍/👎
+  - Wyślij kolejną wiadomość → tylko najnowsza odpowiedź ma przyciski
+  - Kliknij feedback → sprawdź DB czy zapisał userQuery i assistantResponse
+
+### PH04-FEEDBACK-005: Funkcje DB dla feedbacku
+- **Priorytet**: P1
+- **Zależności**: PH04-FEEDBACK-001
+- **Opis**: Funkcje w db/queries.ts do obsługi feedbacku
+- **Definition of Done**:
+  - `saveFeedback(data)` — zapisuje feedback
+  - `getFeedbackStats(period)` — zwraca statystyki (total, positive, negative, rate)
+  - `getFeedbackByChat(chatId)` — feedback dla konkretnego chatu
+  - `getRecentNegativeFeedback(limit)` — ostatnie negatywne oceny do analizy
+- **Testy automatyczne**:
+  - Test: saveFeedback zapisuje poprawnie
+  - Test: getFeedbackStats zwraca prawidłowe liczby
+- **Testy manualne**:
+  - Zapisz kilka feedbacków → getFeedbackStats zwraca poprawne statystyki
 
 ---
 
@@ -473,6 +558,98 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 
 ---
 
+## EPIK: Faza 07 — Board Filters Configuration
+
+**Branch**: `phase/07-board-filters`  
+**Entry criteria**: Faza 06 zakończona  
+**Exit criteria**: 
+- Filtry są automatycznie aplikowane przy każdym zapytaniu do Monday
+- Logi informują o zastosowanych filtrach (ile rekordów przed/po)
+- Wyłączenie filtra (`enabled: false`) działa
+- Testy automatyczne przechodzą
+- Dokumentacja zarządzania filtrami istnieje
+
+### PH07-FILTERS-001: Struktura konfiguracji filtrów
+- **Priorytet**: P0
+- **Zależności**: Brak
+- **Opis**: Utworzenie pliku konfiguracyjnego z definicjami filtrów per board
+- **Definition of Done**:
+  - Plik `lib/monday-board-filters.ts` istnieje
+  - Interface `ColumnFilter` z polami: columnId, operator, value
+  - Interface `BoardFilter` z polami: boardId, boardName, description, enabled, postFilters
+  - Map `BOARD_FILTERS` z przykładowymi filtrami
+  - Funkcja `getFilterForBoard(boardId)` zwraca filtr lub null
+- **Testy automatyczne**:
+  - Test: `getFilterForBoard()` zwraca poprawny filtr dla istniejącego boarda
+  - Test: `getFilterForBoard()` zwraca null dla nieistniejącego boarda
+- **Testy manualne**:
+  - Sprawdzenie struktury pliku → wszystkie interfejsy i funkcje istnieją
+
+### PH07-FILTERS-002: Silnik filtrowania post-fetch
+- **Priorytet**: P0
+- **Zależności**: PH07-FILTERS-001
+- **Opis**: Implementacja logiki aplikowania filtrów na wynikach z Monday API
+- **Definition of Done**:
+  - Plik `lib/monday-filter-engine.ts` istnieje
+  - Funkcja `applyPostFilters(items, filter)` aplikuje filtry
+  - Obsługa `requiredColumns` - filtruje items bez wypełnionych kolumn
+  - Obsługa `columnMatches` - filtruje items według operatorów (equals, not_equals, contains, in, not_in, not_empty)
+  - Obsługa `excludeGroups` - wyklucza items z określonych grup
+  - Logowanie: "Filtered: X -> Y items" dla boarda
+  - Obsługa `enabled: false` - pomija filtrowanie
+- **Testy automatyczne**:
+  - Test: `applyPostFilters()` filtruje requiredColumns
+  - Test: `applyPostFilters()` filtruje columnMatches (wszystkie operatory)
+  - Test: `applyPostFilters()` wyklucza grupy
+  - Test: `enabled: false` pomija filtrowanie
+  - Test: Brak filtra = brak filtrowania
+- **Testy manualne**:
+  - Zapytanie o board z filtrem → mniej rekordów niż bez filtra
+  - Sprawdzenie logów → widoczne "Filtered: X -> Y items"
+
+### PH07-FILTERS-003: Integracja z MCP i native client
+- **Priorytet**: P0
+- **Zależności**: PH07-FILTERS-002
+- **Opis**: Integracja filtrów z istniejącym kodem Monday MCP i native client
+- **Definition of Done**:
+  - `integrations/mcp/init.ts` - `callMondayMCPTool()` aplikuje filtry po pobraniu danych
+  - `integrations/monday/client.ts` - `getBoardItems()` aplikuje filtry po pobraniu danych
+  - Filtry są aplikowane przed zwróceniem wyników do modelu AI
+  - Logi zawierają informację o zastosowanych filtrach
+- **Testy automatyczne**:
+  - Test: `callMondayMCPTool()` aplikuje filtry dla boarda z filtrem
+  - Test: `getBoardItems()` aplikuje filtry dla boarda z filtrem
+  - Test: Brak filtra = brak zmian w wynikach
+- **Testy manualne**:
+  - Zapytanie przez MCP o board z filtrem → wyniki przefiltrowane
+  - Zapytanie przez native client o board z filtrem → wyniki przefiltrowane
+  - Sprawdzenie logów → widoczne informacje o filtrowaniu
+
+### PH07-FILTERS-004: Testy automatyczne filtrów
+- **Priorytet**: P1
+- **Zależności**: PH07-FILTERS-003
+- **Opis**: Kompleksowe testy automatyczne dla systemu filtrów
+- **Definition of Done**:
+  - Plik `tests/monday-board-filters.test.ts` istnieje
+  - Testy pokrywają wszystkie operatory filtrów
+  - Testy pokrywają kombinacje filtrów (requiredColumns + columnMatches + excludeGroups)
+  - Testy pokrywają edge cases (pusty filtr, disabled filter, brak filtra)
+- **Testy automatyczne**: `npx tsx tests/monday-board-filters.test.ts` przechodzi
+- **Testy manualne**: N/A
+
+### PH07-FILTERS-005: Dokumentacja zarządzania filtrami
+- **Priorytet**: P1
+- **Zależności**: PH07-FILTERS-001
+- **Opis**: Dokumentacja jak dodawać, edytować i usuwać filtry
+- **Definition of Done**:
+  - Plik `docs/MONDAY_BOARD_FILTERS.md` istnieje
+  - Zawiera: instrukcje CRUD filtrów, przykłady typowych filtrów, troubleshooting
+  - Link do dokumentacji w `PROJECT_SPEC.md` sekcja 11
+- **Testy automatyczne**: N/A (dokumentacja)
+- **Testy manualne**: Review checklist — dokumentacja jest czytelna i kompletna
+
+---
+
 ## Otwarte punkty (do doprecyzowania)
 
 ### DB Policy
@@ -495,6 +672,16 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 - **Status**: Do ustalenia w Faza 03
 - **Wpływ**: PH03-MONDAY-001
 
+### Feedback Analytics Dashboard
+- **Pytanie**: Czy potrzebny dedykowany dashboard do analizy feedbacku, czy wystarczy export do zewnętrznego narzędzia?
+- **Status**: Do ustalenia po Fazie 04
+- **Wpływ**: PH04-FEEDBACK-005 (może wymagać dodatkowego endpointu)
+
+### Confidence Threshold Tuning
+- **Pytanie**: Czy threshold 0.7 jest optymalny? Może być konfigurowalny per-deployment?
+- **Status**: Do ustalenia po pierwszych testach Fazy 04
+- **Wpływ**: PH04-INTENT-002
+
 ---
 
 ## Statystyki backlogu
@@ -503,14 +690,17 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 - **Faza 01**: 4 zadania (P0: 2, P1: 1, P2: 1) (✅ ukończone 2025-12-19)
 - **Faza 02**: 4 zadania (P0: 3, P1: 1) (✅ ukończone 2025-12-19)
 - **Faza 03**: 5 zadań (P0: 1, P1: 2, P2: 2) (✅ ukończone 2025-12-22)
-- **Faza 04**: 5 zadań (P0: 4, P1: 1) (⏳ nie rozpoczęte)
+- **Faza 04**: 9 zadań (P0: 7, P1: 2) (⏳ nie rozpoczęte)
+  - Część A (Intent + Confidence): 4 zadania
+  - Część B (Feedback Loop): 5 zadań
 - **Faza 05**: 3 zadania (P0: 2, P1: 1) (⏳ nie rozpoczęte)
 - **Faza 06**: 4 zadania (P0: 2, P1: 1, P2: 1) (⏳ nie rozpoczęte)
+- **Faza 07**: 5 zadań (P0: 3, P1: 2) (⏳ nie rozpoczęte)
 
-**Łącznie**: 27 zadań
-**Ukończone**: 15 zadań (56%)
+**Łącznie**: 36 zadań
+**Ukończone**: 15 zadań (42%)
 **W trakcie**: 0 zadań
-**Pozostało**: 12 zadań (44%)
+**Pozostało**: 21 zadań (58%)
 
 ---
 

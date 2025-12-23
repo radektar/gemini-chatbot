@@ -272,44 +272,105 @@ Jeżeli użytkownicy zadają wiele pytań o te same materiały (np. ten sam boar
 
 System działa w trybie **Plan-first**, podobnym do trybu planowania w Cursor: przed uruchomieniem narzędzi (MCP/API) system buduje ukryty kontrakt wejścia, prezentuje użytkownikowi plan/założenia i dopiero po potwierdzeniu wykonuje akcje.
 
-### 4.5.1 Przepływ Plan-first
+### 4.5.1 Przepływ Plan-first (Intent + Confidence Architecture)
 
 ```mermaid
 flowchart TD
-  userPrompt[UserPrompt] --> parse[ParseAndExtractSlots]
-  parse --> checkSlots{CheckMustHaveSlots}
-  checkSlots -->|missing| askUser[AskUserToClarify]
-  checkSlots -->|complete| planDraft[DraftPlanAndAssumptions]
-  askUser -->|userResponds| parse
+  userPrompt[UserPrompt] --> extract[ExtractIntentAndSlots]
+  extract --> confidence{CheckConfidence}
+  confidence -->|low < 0.7| askUser[AskUserToClarify]
+  confidence -->|high >= 0.7| planDraft[DraftPlanAndAssumptions]
+  askUser -->|userResponds| extract
   planDraft --> showPlan[ShowPlanToUser]
   showPlan --> userConfirm{UserConfirmsOrEdits}
-  userConfirm -->|edit| parse
+  userConfirm -->|edit| extract
   userConfirm -->|confirm| toolCalls[RunMCPAndRetrieval]
   toolCalls --> evidence[BuildEvidenceAndCitations]
   evidence --> response[FinalResponseWithSources]
-  response --> feedback[OptionalFeedbackLoop]
+  response --> feedback[FeedbackLoop - thumbs up/down]
+  feedback --> store[StoreInDB for analysis]
 ```
 
 **Kroki przepływu:**
 
-1. **Parse prompt** → ekstrakcja slotów z tekstu użytkownika (geografia, temat, metryka, itp.)
-2. **Check must-have slots** → weryfikacja, czy wszystkie krytyczne parametry są wypełnione
-3. **Ask user (jeśli brakuje)** → system zadaje pytania tylko dla brakujących must-have slotów
+1. **Extract intent and slots** → uniwersalna ekstrakcja z confidence scores (nie per-UC)
+2. **Check confidence** → jeśli confidence < 0.7 dla krytycznych slotów → pytaj
+3. **Ask user (jeśli niska pewność)** → system zadaje pytania tylko gdy niepewny
 4. **Draft plan** → system buduje plan działania (jakie narzędzia użyje, jakie filtry zastosuje)
-5. **Show plan to user** → prezentacja planu w czytelnej formie: „Planuję: 1) wyszukać projekty w Kenii z tagiem 'edukacja', 2) wygenerować narrację 3–5 akapitów, 3) dodać źródła. Kontynuować?”
+5. **Show plan to user** → prezentacja planu w czytelnej formie
 6. **User confirms/edits** → użytkownik potwierdza lub prosi o zmianę
 7. **Run tool calls** → po potwierdzeniu system uruchamia MCP/API
 8. **Build evidence** → każda liczba/teza jest linkowana do źródła
 9. **Final response** → odpowiedź z sekcjami: Wyniki + Źródła + Do potwierdzenia
+10. **Feedback loop** → użytkownik ocenia odpowiedź (👍/👎), wynik zapisywany do DB
 
-### 4.5.2 Implementacja Plan-first
+### 4.5.2 Uniwersalny meta-schemat slotów (QueryContext)
 
-- **Slot extraction**: użycie LLM do ekstrakcji slotów z promptu (geografia, temat, metryka, itp.)
+Zamiast hardcoded slotów per UC, używamy elastycznego meta-schematu:
+
+```typescript
+interface QueryContext {
+  // WHAT - co użytkownik chce?
+  intent: {
+    action: 'find' | 'analyze' | 'generate' | 'compare' | 'summarize' | 'explain';
+    object: string;  // "projekt", "metryka", "mail", "raport", cokolwiek
+    confidence: number; // 0-1
+  };
+  
+  // WHERE - skąd brać dane?
+  dataSources: {
+    primary?: 'monday' | 'slack' | 'impactlog' | 'unknown';
+    filters?: Record<string, any>;  // dynamiczne filtry
+    confidence: number;
+  };
+  
+  // FOR WHOM - kontekst odbiorcy/celu
+  audience: {
+    type?: 'donor' | 'partner' | 'internal' | 'unknown';
+    purpose?: string;  // "spotkanie", "raport", "pitch"
+    confidence: number;
+  };
+  
+  // HOW - format outputu
+  output: {
+    format?: 'narrative' | 'bullets' | 'table' | 'email' | 'raw';
+    length?: 'short' | 'medium' | 'long';
+    confidence: number;
+  };
+}
+```
+
+**Kluczowa zasada:** System nie pyta o wszystko — pyta tylko gdy `confidence < 0.7`.
+
+### 4.5.3 Implementacja Plan-first
+
+- **Intent extraction**: jeden uniwersalny prompt zamiast "detect UC → use UC-specific parser"
+- **Confidence-based prompting**: pytaj tylko gdy pewność niska, nie "przesłuchuj" użytkownika
 - **Plan generation**: LLM generuje czytelny plan działania przed uruchomieniem narzędzi
-- **User confirmation**: system czeka na potwierdzenie użytkownika (może być automatyczne dla prostych zapytań)
+- **User confirmation**: system czeka na potwierdzenie użytkownika (może być automatyczne dla wysokiej pewności)
 - **State management**: przechowywanie stanu kontraktu (wypełnione sloty) w kontekście rozmowy
 
+### 4.5.4 System Feedbacku (Feedback Loop)
+
+Po każdej odpowiedzi AI użytkownik może ocenić jej jakość:
+
+- **Thumbs up (👍)** = odpowiedź pomocna (rating: 1)
+- **Thumbs down (👎)** = odpowiedź niepomocna (rating: -1)
+- **Opcjonalny komentarz** = szczegóły co było nie tak
+
+**Dane zapisywane w DB:**
+- `userQuery` — pytanie użytkownika
+- `assistantResponse` — odpowiedź AI
+- `rating` — ocena (1/-1)
+- `comment` — opcjonalny komentarz
+- `toolsUsed` — jakie narzędzia użyto
+- `timestamp` — kiedy
+
+**Cel:** Iteracyjne ulepszanie systemu na podstawie rzeczywistego feedbacku użytkowników.
+
 ## 4.6 Kontrakt wejścia dla typów zapytań
+
+> **UWAGA**: Od Fazy 04 używamy elastycznego `QueryContext` (sekcja 4.5.2) zamiast hardcoded kontraktów per UC. Poniższe kontrakty służą jako **przykłady** mapowania na meta-schemat, nie jako sztywne wymagania.
 
 Każdy typ zapytania (UC‑01/02/03) ma zdefiniowany **kontrakt wejścia** — schemat pól must-have vs optional oraz reguły domyślne.
 
@@ -917,9 +978,11 @@ Każda faza zawiera:
 | **01** | `phase/01-auth-gating` | System prywatny — wymagana autoryzacja | Middleware auth, ochrona endpointów | Smoke test middleware, manual: redirect/401 | ✅ Ukończone (2025-12-19) |
 | **02** | `phase/02-postgres-history` | Persystencja historii czatów | Postgres/Drizzle, saveChat/getChats | Testy queries.ts, manual: historia per-user |
 | **03** | `phase/03-integrations-readonly` | Integracje read-only + audyt | Monday MCP security, Slack read-only, cleanup debug | Istniejące testy Monday, nowe dla Slack |
-| **04** | `phase/04-plan-first` | Plan-first orchestrator | Slot filling, plan generation, confirmation | Testy parsera slotów, manual: stop&ask flow |
+| **04** | `phase/04-plan-first` | Plan-first orchestrator + Feedback | Intent extraction, confidence-based prompting, feedback loop | Testy confidence, feedback API, manual: plan+feedback flow |
 | **05** | `phase/05-evidence-policy` | Evidence policy (źródła) | Format Wyniki/Źródła/Do potwierdzenia, walidator | Testy reguł evidence, manual: weryfikacja źródeł |
 | **06** | `phase/06-context-budget-hardening` | Context scaling + hardening | Budżet tokenów, degradacja, rate limiting | Testy dużych payloadów, manual: zawężanie zakresu |
+| **07** | `phase/07-ui-branding` | Nowa identyfikacja wizualna z Figma | globals.css, tailwind.config, komponenty UI | Testy wizualne, accessibility |
+| **08** | `phase/08-board-filters` | Stałe filtry per board Monday.com | Konfiguracja filtrów, silnik filtrowania, integracja | Testy filtrów, manual: weryfikacja filtrowania |
 
 ### 12.3 Szczegóły faz
 
@@ -998,22 +1061,38 @@ Każda faza zawiera:
   - Poproś o pobranie danych z Monday → dostajesz wynik
   - Poproś o Slack search → dostajesz wynik (jeśli integracja aktywna)
 
-#### Faza 04 — Plan-first (ask-before-act) dla UC‑01/02/03
+#### Faza 04 — Plan-first (ask-before-act) + Feedback Loop
 
 - **Branch**: `phase/04-plan-first`
-- **Cel**: Narzędzia (MCP/Slack) nie odpalają się bez planu i potwierdzenia
+- **Cel**: Elastyczny orchestrator z confidence-based prompting + system feedbacku do iteracyjnego ulepszania
 - **Zakres**:
-  - Slot-filling must-have (wg `docs/USE_CASES.md`)
-  - Generowanie i prezentowanie planu, wymóg potwierdzenia
-  - "Stop & ask triggers" (brak must-have / niejednoznaczność)
+  - **Intent + Confidence Architecture** (zamiast hardcoded UC slots):
+    - Uniwersalny meta-schemat slotów (QueryContext)
+    - Confidence-based prompting (pytaj tylko gdy confidence < threshold)
+    - Plan presentation (zawsze pokazuj plan przed tool calls)
+    - Generic stop & ask triggers (nie per-UC)
+  - **Feedback Loop**:
+    - Tabela `MessageFeedback` w DB (thumbs up/down + komentarz)
+    - API `/api/feedback` do zapisywania ocen
+    - Komponent `FeedbackButtons` przy odpowiedziach AI
+    - Metryki: satisfaction rate, trend analysis
+- **Poza zakresem**: RLHF (Reinforcement Learning from Human Feedback) - to przyszłość
 - **Entry criteria**: Faza 03 zakończona (narzędzia dostępne)
 - **Exit criteria**:
-  - Przy brakujących must-have: system zadaje pytania zamiast robić tool calls
-  - Po potwierdzeniu: dopiero wtedy robi tool calls
-- **Testy automatyczne**: Testy (tsx) dla parsera slotów i routera: wejście → plan → decyzja o tool-calls
+  - System elastycznie obsługuje różne typy zapytań (nie tylko UC-01/02/03)
+  - Przy niskiej pewności (confidence < 0.7): system pyta zamiast zgadywać
+  - Plan jest zawsze prezentowany przed tool calls
+  - Użytkownik może ocenić odpowiedź (👍/👎)
+  - Feedback jest zapisywany do DB z pełnym kontekstem
+- **Testy automatyczne**:
+  - Test: slot extraction z confidence scores
+  - Test: stop & ask triggers działają przy niskiej pewności
+  - Test: feedback API zapisuje do DB poprawnie
 - **Testy manualne**:
-  - Wpisz "Znajdź projekt dla donora" bez geografii → dostajesz pytanie o geografię
-  - Po uzupełnieniu → dostajesz plan, potem dopiero wyniki
+  - Wpisz ogólne zapytanie → system pokazuje plan i prosi o potwierdzenie
+  - Wpisz niejednoznaczne zapytanie → system pyta o doprecyzowanie
+  - Po odpowiedzi AI → widoczne przyciski 👍/👎
+  - Kliknij 👎 → możliwość dodania komentarza
 
 #### Faza 05 — Evidence policy (Źródła + Do potwierdzenia)
 
@@ -1041,6 +1120,70 @@ Każda faza zawiera:
   - System prosi o zawężenie przy zbyt dużym zakresie
 - **Testy automatyczne**: Test: duży payload → mechanizm ogranicza i generuje "zawęź zakres"
 - **Testy manualne**: Zapytanie, które zwraca >100 rekordów → system proponuje zawężenie
+
+#### Faza 07 — UI Branding (Nowa identyfikacja wizualna z Figma)
+
+- **Branch**: `phase/07-ui-branding`
+- **Cel**: Wdrożenie pełnego design systemu zgodnego z projektem Figma
+- **Zakres**:
+  - **Paleta kolorów** z Figma:
+    - Primary/Accent: `#6c00f0` (purple)
+    - SECONDARY: `#f6f5ff` → `#030026` (fioletowa skala)
+    - TERTIARY: `#fffbf5` → `#261700` (beżowa skala)
+    - NEUTRAL: `#ffffff` → `#2d2e30` (szara skala)
+  - **Typografia**: Font Space Grotesk (via next/font)
+  - **Spacing/Radius**: 10px (medium), 12px (big)
+  - **Dark mode**: Zachowanie obsługi z inwersją palety
+  - **Komponenty UI**: Button, Input, Navbar, Chat
+- **Poza zakresem**: Animacje, micro-interactions, nowe komponenty
+- **Entry criteria**: 
+  - Dostęp do projektu Figma przez MCP
+  - Faza 06 zakończona (stabilna baza)
+- **Exit criteria**:
+  - CSS variables zaktualizowane (light + dark mode)
+  - Font Space Grotesk załadowany i używany
+  - Paleta kolorów w tailwind.config.ts
+  - Komponenty UI zgodne z Figma
+  - Testy automatyczne przechodzą
+  - Testy manualne zaliczone
+- **Testy automatyczne**:
+  - `pnpm test` - wszystkie istniejące testy przechodzą
+  - `pnpm lint` - brak błędów lintowania
+  - `pnpm build` - build przechodzi bez błędów
+- **Testy manualne**:
+  - Light mode: kolory, kontrast, czytelność
+  - Dark mode: przełączanie, kontrast
+  - Responsywność: mobile (375px), tablet (768px), desktop (1440px)
+  - Accessibility: kontrast WCAG AA (4.5:1), focus visible
+  - Porównanie z projektem Figma
+
+#### Faza 08 — Board Filters Configuration
+
+- **Branch**: `phase/08-board-filters`
+- **Cel**: Automatyczne aplikowanie stałych filtrów per board przed każdym zapytaniem użytkownika
+- **Zakres**:
+  - Plik konfiguracyjny z definicjami filtrów per board (`lib/monday-board-filters.ts`)
+  - Silnik filtrowania post-fetch (`lib/monday-filter-engine.ts`)
+  - Integracja z `integrations/mcp/init.ts` i `integrations/monday/client.ts`
+  - Dokumentacja zarządzania filtrami
+- **Poza zakresem**: Filtry API-level (query_params), Admin UI, filtry per-user
+- **Entry criteria**: Faza 07 zakończona
+- **Exit criteria**:
+  - Filtry są automatycznie aplikowane przy każdym zapytaniu do Monday
+  - Logi informują o zastosowanych filtrach (ile rekordów przed/po)
+  - Wyłączenie filtra (`enabled: false`) działa
+  - Testy automatyczne przechodzą
+  - Dokumentacja zarządzania filtrami istnieje
+- **Testy automatyczne**:
+  - Test: `getFilterForBoard()` zwraca poprawny filtr
+  - Test: `applyPostFilters()` filtruje requiredColumns
+  - Test: `applyPostFilters()` filtruje columnMatches
+  - Test: `applyPostFilters()` wyklucza grupy
+  - Test: `enabled: false` pomija filtrowanie
+  - Test: Brak filtra dla boarda = brak filtrowania
+- **Testy manualne**:
+  - Zapytanie o board z filtrem → mniej rekordów niż bez filtra
+  - Sprawdzenie logów → widoczne "Filtered: X -> Y items"
 
 ### 12.4 Backlog techniczny
 

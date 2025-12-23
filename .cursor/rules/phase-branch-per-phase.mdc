@@ -1,0 +1,14 @@
+---
+description: "Dla każdej nowej fazy twórz osobny branch z oznaczeniem fazy (phase/<NN>-<slug>)."
+alwaysApply: true
+---
+
+Gdy zaczynasz **nową fazę** wdrożenia (wg sekcji "Implementation Plan (Phases)" w `@docs/PROJECT_SPEC.md`):
+
+- Zawsze pracuj na **nowym branchu** nazwanym zgodnie z konwencją: `phase/<NN>-<slug>`.
+  - Przykłady: `phase/01-auth-gating`, `phase/02-postgres-history`, `phase/03-integrations-readonly`.
+- Przed rozpoczęciem implementacji upewnij się, że:
+  - faza ma spełnione **entry criteria**,
+  - a planowane zmiany realizują **exit criteria / Definition of Done** dla tej fazy.
+- Jeśli branch dla fazy już istnieje, użyj istniejącego zamiast tworzyć duplikat.
+

@@ -5,6 +5,61 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-12-23
+
+### Added
+- **Faza 04 - Plan-first + Feedback Loop**: Implementacja plan-first approach z feedback loop zgodnie z BACKLOG PH04-INTENT-001/002/003/004 i PH04-FEEDBACK-001/002
+  - **Intent Extraction**: Ekstrakcja intencji użytkownika z confidence scoring (`ai/intent-extractor.ts`)
+  - **Confidence-based Prompting**: System pyta o doprecyzowanie gdy confidence < threshold (domyślnie 0.7)
+  - **Plan Generation**: Generowanie planu działania przed wykonaniem narzędzi (`ai/plan-generator.ts`)
+  - **Plan Presentation**: Prezentacja planu użytkownikowi z przyciskami "Wykonaj plan" i "Popraw plan" (`components/custom/plan-action-buttons.tsx`)
+  - **Stop & Ask Triggers**: Automatyczne pytanie o zawężenie przy >100 rekordów lub niskiej confidence
+  - **Feedback Loop**: System oceny odpowiedzi AI z przyciskami 👍/👎 (`components/custom/feedback-buttons.tsx`)
+  - **Feedback API**: Endpoint `/api/feedback` do zapisywania ocen z pełnym kontekstem
+  - **Database Schema**: Tabela `MessageFeedback` do przechowywania feedbacku z kontekstem (userQuery, assistantResponse, toolsUsed)
+  - **Clarification Suggestions**: Komponent do wyświetlania sugestii doprecyzowania (`components/custom/clarification-suggestions.tsx`)
+
+### Changed
+- **app/(chat)/api/chat/route.ts**: 
+  - Dodano logikę intent extraction przed generowaniem planu
+  - Dodano confidence-based prompting - system pyta o doprecyzowanie gdy confidence < threshold
+  - Dodano prezentację planu przed uruchomieniem narzędzi
+  - Dodano logikę potwierdzenia planu - system wyciąga plan z poprzedniej odpowiedzi
+  - Dodano stop & ask trigger dla >100 rekordów z automatycznym pobieraniem całkowitej liczby z `get_board_info`
+  - Wszystkie system prompts przetłumaczone na angielski
+- **components/custom/message.tsx**: 
+  - Dodano logikę wyświetlania FeedbackButtons tylko przy ostatniej odpowiedzi (`isLastMessage`)
+  - Dodano logikę wyświetlania PlanActionButtons tylko gdy plan jest obecny i nie wykonany
+  - Dodano przekazywanie `onAppendMessage` do PlanActionButtons
+- **components/custom/chat.tsx**: 
+  - Dodano logikę określania `isLastAssistantMessage` dla FeedbackButtons
+- **db/queries.ts**: 
+  - Dodano funkcję `saveFeedback()` z graceful degradation (działa bez DB w PoC mode)
+  - Dodano sprawdzanie czy chat istnieje przed zapisaniem feedbacku (ustawia chatId na null jeśli nie istnieje)
+- **app/(chat)/api/feedback/route.ts**: 
+  - Dodano obsługę wszystkich błędów bazy danych z graceful degradation
+  - Endpoint zwraca sukces nawet gdy DB nie jest skonfigurowana lub występują błędy foreign key
+
+### Fixed
+- **Plan execution**: Naprawiono błąd `clarificationResponse.toDataStreamResponse is not a function` - dodano `await` przed `streamText()`
+- **Plan confirmation**: Naprawiono logikę potwierdzenia planu - system teraz wyciąga plan z poprzedniej odpowiedzi zamiast generować nowy
+- **Feedback buttons**: Naprawiono wyświetlanie FeedbackButtons - teraz pokazują się tylko przy ostatniej odpowiedzi
+- **Stop & ask trigger**: Naprawiono wykrywanie >100 rekordów - system automatycznie pobiera całkowitą liczbę z `get_board_info` i pokazuje dokładną liczbę zamiast "więcej niż X"
+- **Feedback API**: Naprawiono obsługę błędów foreign key - system sprawdza czy chat istnieje przed zapisaniem feedbacku
+
+### Testing
+- **Testy automatyczne**: 62/62 testów przechodzi pomyślnie (100%)
+  - ✅ Intent extraction tests (15 testów)
+  - ✅ Confidence-based prompting tests (12 testów)
+  - ✅ Plan generation tests (8 testów)
+  - ✅ Stop & ask triggers tests (7 testów)
+  - ✅ Feedback API tests (20 testów)
+- **Testy manualne**: 13/15 scenariuszy zweryfikowane pomyślnie
+  - ✅ Część A: Intent Extraction + Confidence-based Prompting (5/5)
+  - ✅ Część B: Stop & Ask Triggers (2/2)
+  - ✅ Część C: Feedback Loop (5/5)
+  - ⏳ Część D: Scenariusze Integracyjne (1/2 - D1 ukończony, D2 wymaga dostępu do DB)
+
 ## [0.1.6] - 2025-12-22
 
 ### Added

@@ -7,25 +7,43 @@ import { Streamdown } from "streamdown";
 
 import { BotIcon, UserIcon } from "./icons";
 import { PreviewAttachment } from "./preview-attachment";
-import { Weather } from "./weather";
-import { MondayBoard } from "../tools/monday-board";
-import { MondayTask } from "../tools/monday-task";
-import { SlackChannels } from "../tools/slack-channels";
-import { SlackMessages } from "../tools/slack-messages";
+import { FeedbackButtons } from "./feedback-buttons";
+import { PlanActionButtons } from "./plan-action-buttons";
+import { ClarificationSuggestions } from "./clarification-suggestions";
 
 export const Message = ({
   chatId,
+  messageId,
   role,
   content,
   toolInvocations,
   attachments,
+  userQuery,
+  assistantResponse,
+  isLastMessage,
+  onAppendMessage,
 }: {
   chatId: string;
+  messageId: string;
   role: string;
   content: string | ReactNode;
   toolInvocations: Array<ToolInvocation> | undefined;
   attachments?: Array<Attachment>;
+  userQuery?: string;
+  assistantResponse?: string;
+  isLastMessage?: boolean;
+  onAppendMessage?: (message: { role: "user"; content: string }) => Promise<void>;
 }) => {
+  const toolsUsed = toolInvocations?.map((inv) => inv.toolName) || [];
+  
+  // Check if this is a clarification message (no tools, contains suggestions)
+  const isClarificationMessage = 
+    role === "assistant" && 
+    isLastMessage &&
+    (!toolInvocations || toolInvocations.length === 0) &&
+    typeof content === "string" &&
+    (content.includes('np.') || content.includes('proponuję') || content.includes('możesz'));
+  
   return (
     <motion.div
       className={`flex flex-row gap-4 px-4 w-full md:w-[500px] md:px-0 first-of-type:pt-20`}
@@ -44,53 +62,38 @@ export const Message = ({
         )}
 
         {toolInvocations && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
             {toolInvocations.map((toolInvocation) => {
               const { toolName, toolCallId, state } = toolInvocation;
 
-              if (state === "result") {
-                const { result } = toolInvocation;
+              // Only show loading indicator, hide results completely
+              if (state !== "result") {
+                const toolLabels: Record<string, string> = {
+                  list_boards: "Szukam tablic w Monday.com...",
+                  listMondayBoards: "Szukam tablic w Monday.com...",
+                  get_board_items: "Pobieram zadania...",
+                  get_item_details: "Analizuję szczegóły...",
+                  getMondayTasks: "Pobieram zadania...",
+                  getMondayTaskDetails: "Analizuję szczegóły...",
+                  search_items_by_column_value: "Przeszukuję dane...",
+                  searchSlackHistory: "Przeszukuję Slack...",
+                  getSlackChannels: "Pobieram kanały Slack...",
+                  getWeather: "Sprawdzam pogodę...",
+                };
 
                 return (
-                  <div key={toolCallId}>
-                    {toolName === "getWeather" ? (
-                      <Weather weatherAtLocation={result} />
-                    ) : toolName === "list_boards" || toolName === "listMondayBoards" ? (
-                      <MondayBoard result={result} />
-                    ) : toolName === "get_board_items" || toolName === "get_item_details" || toolName === "getMondayTasks" || toolName === "getMondayTaskDetails" ? (
-                      <MondayTask result={result} />
-                    ) : toolName === "searchSlackHistory" ? (
-                      <SlackMessages result={result} />
-                    ) : toolName === "getSlackChannels" ? (
-                      <SlackChannels result={result} />
-                    ) : (
-                      <div className="bg-card rounded-lg p-4 border">
-                        <pre className="text-sm overflow-auto">
-                          {JSON.stringify(result, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                );
-              } else {
-                return (
-                  <div key={toolCallId} className="skeleton">
-                    {toolName === "getWeather" ? (
-                      <Weather />
-                    ) : toolName === "list_boards" || toolName === "listMondayBoards" ? (
-                      <MondayBoard result={{ boards: [] }} />
-                    ) : toolName === "get_board_items" || toolName === "get_item_details" || toolName === "getMondayTasks" || toolName === "getMondayTaskDetails" ? (
-                      <MondayTask result={{ tasks: [] }} />
-                    ) : toolName === "searchSlackHistory" ? (
-                      <SlackMessages result={{ results: [] }} />
-                    ) : toolName === "getSlackChannels" ? (
-                      <SlackChannels result={{ channels: [] }} />
-                    ) : (
-                      <div className="bg-muted rounded-lg p-4 h-20 animate-pulse" />
-                    )}
+                  <div
+                    key={toolCallId}
+                    className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse"
+                  >
+                    <div className="size-2 bg-blue-500 rounded-full animate-ping" />
+                    {toolLabels[toolName] || "Analizuję..."}
                   </div>
                 );
               }
+
+              // Hide results when complete - the model's text response will contain the processed info
+              return null;
             })}
           </div>
         )}
@@ -101,6 +104,41 @@ export const Message = ({
               <PreviewAttachment key={attachment.url} attachment={attachment} />
             ))}
           </div>
+        )}
+
+        {role === "assistant" && isLastMessage && (
+          <>
+            {/* Show clarification suggestions if this is a clarification message */}
+            {isClarificationMessage && typeof content === "string" && onAppendMessage && (
+              <ClarificationSuggestions
+                content={content}
+                onAppendMessage={onAppendMessage}
+              />
+            )}
+            {/* Show plan action buttons only if plan is present and not yet executed */}
+            {(!toolInvocations || toolInvocations.length === 0) && (
+              <PlanActionButtons
+                chatId={chatId}
+                messageId={messageId}
+                content={typeof content === "string" ? content : ""}
+                onAppendMessage={onAppendMessage}
+              />
+            )}
+            {/* Show feedback buttons after plan execution or final response */}
+            {((toolInvocations && toolInvocations.length > 0) || 
+              (typeof content === "string" && content.length > 0)) && (
+              <FeedbackButtons
+                chatId={chatId}
+                messageId={messageId}
+                userQuery={userQuery}
+                assistantResponse={
+                  assistantResponse ||
+                  (typeof content === "string" ? content : undefined)
+                }
+                toolsUsed={toolsUsed}
+              />
+            )}
+          </>
         )}
       </div>
     </motion.div>

@@ -8,6 +8,7 @@ import { useScrollToBottom } from "@/components/custom/use-scroll-to-bottom";
 
 import { MultimodalInput } from "./multimodal-input";
 import { Overview } from "./overview";
+import { TypingIndicator } from "./typing-indicator";
 
 export function Chat({
   id,
@@ -41,16 +42,69 @@ export function Chat({
         >
           {messages.length === 0 && <Overview />}
 
-          {messages.map((message) => (
-            <PreviewMessage
-              key={message.id}
-              chatId={id}
-              role={message.role}
-              content={message.content}
-              attachments={message.experimental_attachments}
-              toolInvocations={message.toolInvocations}
-            />
-          ))}
+          {messages.map((message, index) => {
+            // Znajdź poprzednią wiadomość użytkownika dla odpowiedzi assistant
+            let userQuery: string | undefined;
+            if (message.role === "assistant") {
+              // Szukaj wstecz od aktualnej wiadomości
+              for (let i = index - 1; i >= 0; i--) {
+                if (messages[i].role === "user") {
+                  userQuery =
+                    typeof messages[i].content === "string"
+                      ? messages[i].content
+                      : undefined;
+                  break;
+                }
+              }
+            }
+
+            // Sprawdź czy to ostatnia wiadomość assistant
+            // Szukamy wstecz od końca, aby znaleźć ostatnią wiadomość assistant
+            const isLastAssistantMessage = (() => {
+              if (message.role !== "assistant") return false;
+              // Sprawdź czy po tej wiadomości nie ma już innych wiadomości assistant
+              for (let i = index + 1; i < messages.length; i++) {
+                if (messages[i].role === "assistant") {
+                  return false;
+                }
+              }
+              return true;
+            })();
+
+            return (
+              <PreviewMessage
+                key={message.id}
+                chatId={id}
+                messageId={message.id}
+                role={message.role}
+                content={message.content}
+                attachments={message.experimental_attachments}
+                toolInvocations={message.toolInvocations}
+                userQuery={userQuery}
+                assistantResponse={
+                  message.role === "assistant" &&
+                  typeof message.content === "string"
+                    ? message.content
+                    : undefined
+                }
+                isLastMessage={isLastAssistantMessage}
+                onAppendMessage={async (msg) => {
+                  await append(msg);
+                }}
+              />
+            );
+          })}
+
+          {/* Show typing indicator when loading and no assistant message yet or last message is empty */}
+          {isLoading && (() => {
+            const lastMessage = messages[messages.length - 1];
+            const shouldShowIndicator = 
+              !lastMessage || 
+              lastMessage.role !== "assistant" || 
+              (typeof lastMessage.content === "string" && lastMessage.content.trim() === "");
+            
+            return shouldShowIndicator ? <TypingIndicator /> : null;
+          })()}
 
           <div
             ref={messagesEndRef}

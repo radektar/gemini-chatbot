@@ -215,3 +215,4 @@ Before deploying to production:
 - [ ] Privacy policy updated to mention Slack data access
 - [ ] Users informed about chatbot's access to public channels
 
+

@@ -349,3 +349,4 @@ export function getAllowedChannels(): string[] {
   return process.env.SLACK_ALLOWED_CHANNELS?.split(',').map(id => id.trim()) || [];
 }
 
+

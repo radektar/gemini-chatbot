@@ -1,11 +1,11 @@
 import "server-only";
 
 import { genSaltSync, hashSync } from "bcrypt-ts";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, and, sql, count, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-import { user, chat, User } from "./schema";
+import { user, chat, User, messageFeedback, MessageFeedback } from "./schema";
 
 // Optionally, if not using email/pass login, you can
 // use the Drizzle adapter for Auth.js / NextAuth
@@ -175,6 +175,150 @@ export async function getChatById({ id }: { id: string }) {
       return undefined;
     }
     console.error("Failed to get chat by id from database");
+    throw error;
+  }
+}
+
+export async function saveFeedback({
+  chatId,
+  userId,
+  messageId,
+  rating,
+  comment,
+  userQuery,
+  assistantResponse,
+  toolsUsed,
+}: {
+  chatId?: string;
+  userId: string;
+  messageId?: string;
+  rating: 1 | -1;
+  comment?: string;
+  userQuery?: string;
+  assistantResponse?: string;
+  toolsUsed?: any;
+}) {
+  try {
+    const database = getDb();
+    
+    // Check if chatId exists in Chat table before saving feedback
+    // If chatId is provided but doesn't exist, set it to null to avoid foreign key violation
+    let finalChatId: string | null = chatId || null;
+    if (finalChatId) {
+      try {
+        const existingChat = await database.select().from(chat).where(eq(chat.id, finalChatId)).limit(1);
+        if (existingChat.length === 0) {
+          console.warn(`⚠️  Chat ${finalChatId} does not exist in database - setting chatId to null`);
+          finalChatId = null;
+        }
+      } catch (checkError) {
+        // If check fails, set chatId to null to avoid foreign key violation
+        console.warn(`⚠️  Failed to check if chat exists - setting chatId to null: ${checkError}`);
+        finalChatId = null;
+      }
+    }
+    
+    return await database.insert(messageFeedback).values({
+      chatId: finalChatId,
+      userId,
+      messageId: messageId || null,
+      rating,
+      comment: comment || null,
+      userQuery: userQuery || null,
+      assistantResponse: assistantResponse || null,
+      toolsUsed: toolsUsed ? JSON.stringify(toolsUsed) : null,
+      createdAt: new Date(),
+    });
+  } catch (error) {
+    // Graceful degradation: silently fail if DB not configured (PoC mode)
+    if (error instanceof Error && error.message.includes("Database not configured")) {
+      console.warn("⚠️  Database not configured - feedback not saved (PoC mode)");
+      return;
+    }
+    console.error("Failed to save feedback in database");
+    throw error;
+  }
+}
+
+export async function getFeedbackStats(period?: string) {
+  try {
+    const database = getDb();
+    
+    let whereCondition = sql`1=1`;
+    
+    if (period) {
+      const days = period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 90 : 0;
+      if (days > 0) {
+        whereCondition = sql`${messageFeedback.createdAt} >= NOW() - INTERVAL '${sql.raw(String(days))} days'`;
+      }
+    }
+    
+    const [stats] = await database
+      .select({
+        total: count(),
+        positive: sql<number>`COUNT(CASE WHEN ${messageFeedback.rating} = 1 THEN 1 END)`,
+        negative: sql<number>`COUNT(CASE WHEN ${messageFeedback.rating} = -1 THEN 1 END)`,
+      })
+      .from(messageFeedback)
+      .where(whereCondition);
+    
+    const total = Number(stats.total) || 0;
+    const positive = Number(stats.positive) || 0;
+    const negative = Number(stats.negative) || 0;
+    const rate = total > 0 ? positive / total : 0;
+    
+    return {
+      total,
+      positive,
+      negative,
+      rate,
+    };
+  } catch (error) {
+    // Graceful degradation: return empty stats if DB not configured (PoC mode)
+    if (error instanceof Error && error.message.includes("Database not configured")) {
+      console.warn("⚠️  Database not configured - returning empty feedback stats (PoC mode)");
+      return { total: 0, positive: 0, negative: 0, rate: 0 };
+    }
+    console.error("Failed to get feedback stats from database");
+    throw error;
+  }
+}
+
+export async function getFeedbackByChat(chatId: string) {
+  try {
+    const database = getDb();
+    return await database
+      .select()
+      .from(messageFeedback)
+      .where(eq(messageFeedback.chatId, chatId))
+      .orderBy(desc(messageFeedback.createdAt));
+  } catch (error) {
+    // Graceful degradation: return empty array if DB not configured (PoC mode)
+    if (error instanceof Error && error.message.includes("Database not configured")) {
+      console.warn("⚠️  Database not configured - returning empty feedback list (PoC mode)");
+      return [];
+    }
+    console.error("Failed to get feedback by chat from database");
+    throw error;
+  }
+}
+
+export async function getRecentNegativeFeedback(limit: number = 10) {
+  try {
+    const database = getDb();
+    return await database
+      .select()
+      .from(messageFeedback)
+      .where(eq(messageFeedback.rating, -1))
+      .orderBy(desc(messageFeedback.createdAt))
+      .limit(limit);
+  } catch (error) {
+    // Graceful degradation: return empty array if DB not configured (PoC mode)
+    if (error instanceof Error && error.message.includes("Database not configured")) {
+      console.warn("⚠️  Database not configured - returning empty negative feedback list (PoC mode)");
+      return [];
+    }
+    console.error("Failed to get recent negative feedback from database");
     throw error;
   }
 }
