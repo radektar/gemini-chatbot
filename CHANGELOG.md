@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **components/custom/chat.tsx**: Dodano funkcję `getLoadingPhase()` określającą aktualną fazę na podstawie stanu tool invocations i wiadomości
   - **components/custom/message.tsx**: Usunięto szczegółowe komunikaty dla każdego toolInvocation (np. "Szukam tablic w Monday.com...", "Pobieram zadania...")
   - Użytkownik widzi teraz tylko jeden, płynnie zmieniający się status zamiast listy szczegółowych kroków
+- **Intent extraction z akumulacją kontekstu**: Ulepszenie ekstrakcji intencji z wykorzystaniem historii konwersacji
+  - **ai/intent-extraction.ts**: Dodano funkcję `buildConversationContext()` do akumulacji kontekstu z ostatnich 6 wiadomości (3 wymiany)
+  - **ai/intent-extraction.ts**: Zmieniono sygnaturę `extractIntent()` aby przyjmowała historię konwersacji jako drugi parametr
+  - **ai/intent-extraction.ts**: Zmieniono zasady confidence z rygorystycznych na bardziej zbalansowane - akcent na actionable queries (jeśli użytkownik podał źródło danych + przynajmniej 1 filtr, confidence >= 0.7)
+  - **ai/intent-extraction.ts**: Dodano "ACTIONABLE QUERY BOOST" - jeśli intent jest jasny (>=0.6) i dataSources jest actionable (>=0.6), average confidence jest co najmniej 0.65
+  - **app/(chat)/api/chat/route.ts**: Dodano budowanie historii konwersacji i przekazywanie jej do `extractIntent()`
+  - System teraz lepiej rozumie kontekst z poprzednich wiadomości i nie wymaga powtarzania informacji
 
 ## [0.2.1] - 2025-12-23
 

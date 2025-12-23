@@ -72,7 +72,15 @@ export async function POST(request: Request) {
   // Only extract intent and generate new plan if NOT a plan confirmation
   if (!isPlanConfirmation && lastUserMessage && typeof lastUserMessage.content === "string") {
     try {
-      queryContext = await extractIntent(lastUserMessage.content);
+      // Build conversation history for context accumulation
+      const conversationHistory = coreMessages
+        .filter((m) => m.role === "user" || m.role === "assistant")
+        .map((m) => ({
+          role: m.role as "user" | "assistant",
+          content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
+        }));
+      
+      queryContext = await extractIntent(lastUserMessage.content, conversationHistory);
       
       // Check if we need to ask for clarification
       if (queryContext.averageConfidence < confidenceThreshold) {
