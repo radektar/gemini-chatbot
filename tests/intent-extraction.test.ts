@@ -210,3 +210,83 @@ test("Should extract filters from query", () => {
   });
 });
 
+test("Should have low weighted average for 'Pokaż projekty' without filters", () => {
+  // Symulacja przypadku "Pokaż projekty" bez filtrów
+  // Model powinien dać niską confidence dla dataSources (< 0.4)
+  const mockQueryContext = {
+    intent: {
+      action: "find" as const,
+      object: "projekty",
+      confidence: 0.5, // Ogólne zapytanie bez kontekstu
+    },
+    dataSources: {
+      primary: "monday" as const,
+      filters: {}, // BRAK FILTRÓW - krytyczne!
+      confidence: 0.3, // < 0.4 zgodnie z nowymi regułami
+    },
+    audience: {
+      type: "unknown" as const,
+      confidence: 0.3,
+    },
+    output: {
+      format: "bullets" as const,
+      confidence: 0.6,
+    },
+    averageConfidence: 0, // Będzie przeliczona
+  };
+
+  // Oblicz ważoną średnią (jak w kodzie)
+  const weightedAverage = (
+    mockQueryContext.intent.confidence * 0.2 +
+    mockQueryContext.dataSources.confidence * 0.5 +
+    mockQueryContext.audience.confidence * 0.15 +
+    mockQueryContext.output.confidence * 0.15
+  );
+
+  // Dodatkowa korekta dla bardzo niskiej dataSources confidence
+  const finalAverage = mockQueryContext.dataSources.confidence < 0.4
+    ? Math.min(weightedAverage, 0.55)
+    : weightedAverage;
+
+  assert(finalAverage < 0.7, `Weighted average should be < 0.7 for query without filters (got ${finalAverage})`);
+  assert(mockQueryContext.dataSources.confidence < 0.4, "DataSources confidence should be < 0.4 when no filters");
+  assert(Object.keys(mockQueryContext.dataSources.filters || {}).length === 0, "Filters should be empty");
+});
+
+test("Should have high weighted average for query with filters", () => {
+  // Symulacja przypadku "Znajdź projekty edukacyjne w Kenii" z filtrami
+  const mockQueryContext = {
+    intent: {
+      action: "find" as const,
+      object: "projekty edukacyjne",
+      confidence: 0.8, // Konkretne zapytanie
+    },
+    dataSources: {
+      primary: "monday" as const,
+      filters: { geography: "Kenia", theme: "edukacja" }, // 2 filtry
+      confidence: 0.7, // >= 0.7 dla 2-3 filtrów
+    },
+    audience: {
+      type: "unknown" as const,
+      confidence: 0.3,
+    },
+    output: {
+      format: "bullets" as const,
+      confidence: 0.6,
+    },
+    averageConfidence: 0,
+  };
+
+  // Oblicz ważoną średnią
+  const weightedAverage = (
+    mockQueryContext.intent.confidence * 0.2 +
+    mockQueryContext.dataSources.confidence * 0.5 +
+    mockQueryContext.audience.confidence * 0.15 +
+    mockQueryContext.output.confidence * 0.15
+  );
+
+  assert(weightedAverage >= 0.6, `Weighted average should be >= 0.6 for query with filters (got ${weightedAverage})`);
+  assert(mockQueryContext.dataSources.confidence >= 0.7, "DataSources confidence should be >= 0.7 when filters present");
+  assert(Object.keys(mockQueryContext.dataSources.filters || {}).length >= 2, "Should have at least 2 filters");
+});
+

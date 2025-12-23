@@ -57,17 +57,61 @@ Wyekstrahuj:
    - length: jaka długość? (short, medium, long)
    - confidence: jak pewny jesteś co do formatu? (0-1)
 
-5. **averageConfidence**: średnia z wszystkich confidence scores
+5. **averageConfidence**: średnia z wszystkich confidence scores (będzie przeliczona z wagami w kodzie)
 
-WAŻNE:
-- Jeśli informacja nie jest jasna lub nieobecna, użyj niskiej confidence (< 0.5)
-- Jeśli informacja jest jasna i jednoznaczna, użyj wysokiej confidence (>= 0.7)
-- Jeśli informacja jest częściowo jasna, użyj średniej confidence (0.5-0.7)
-- Dla brakujących informacji użyj wartości domyślnych i niskiej confidence
+WAŻNE - RYGORYSTYCZNE ZASADY CONFIDENCE:
+
+1. **DataSources confidence** - KRYTYCZNE dla zapytań o projekty/dane:
+   - Jeśli zapytanie dotyczy projektów/danych z Monday.com:
+     * BRAK FILTRÓW (geografia, status, temat, okres) → confidence MUSI być < 0.4
+     * Tylko 1 filtr → confidence < 0.5
+     * 2-3 filtry → confidence 0.5-0.7
+     * 4+ filtry lub bardzo konkretne → confidence >= 0.7
+   - Ogólne zapytania typu "pokaż projekty", "znajdź projekty", "pokaż wszystkie projekty" BEZ filtrów → confidence < 0.4
+   - Jeśli primary = "unknown" → confidence < 0.3
+   - Jeśli primary = "monday" ale brak filtrów dla zapytań o projekty → confidence < 0.4
+
+2. **Intent confidence**:
+   - Ogólne akcje ("find", "show", "pokaż") bez kontekstu → confidence < 0.6
+   - Konkretne akcje z kontekstem ("find projects in Kenya", "znajdź projekty edukacyjne") → confidence >= 0.7
+
+3. **Audience confidence**:
+   - Jeśli type = "unknown" → confidence < 0.3
+   - Jeśli brak purpose → confidence < 0.5
+
+4. **Output confidence**:
+   - Jeśli format nie jest określony → confidence < 0.5
+
+5. **Przykłady oceny**:
+   - "Pokaż projekty" → dataSources.confidence < 0.4 (brak filtrów), intent.confidence < 0.6 (ogólne)
+   - "Znajdź projekty edukacyjne w Kenii" → dataSources.confidence >= 0.7 (2 filtry: temat + geografia), intent.confidence >= 0.7
+   - "Ile beneficjentów ma projekt X?" → dataSources.confidence >= 0.7 (konkretny projekt), intent.confidence >= 0.7
+
+PAMIĘTAJ: Bądź RYGORYSTYCZNY - lepiej mieć zbyt niską confidence niż zbyt wysoką dla niejasnych zapytań!
 `,
   });
 
-  return object as QueryContext;
+  const queryContext = object as QueryContext;
+
+  // Oblicz ważoną średnią zamiast prostej średniej
+  // Wagi: dataSources (50%), intent (20%), audience (15%), output (15%)
+  // DataSources ma największą wagę bo brak filtrów jest krytyczny
+  const weightedAverage = (
+    queryContext.intent.confidence * 0.2 +
+    queryContext.dataSources.confidence * 0.5 +
+    queryContext.audience.confidence * 0.15 +
+    queryContext.output.confidence * 0.15
+  );
+
+  // Dodatkowa korekta: jeśli dataSources ma bardzo niską confidence (< 0.4), 
+  // obniż averageConfidence jeszcze bardziej
+  if (queryContext.dataSources.confidence < 0.4) {
+    queryContext.averageConfidence = Math.min(weightedAverage, 0.55);
+  } else {
+    queryContext.averageConfidence = weightedAverage;
+  }
+
+  return queryContext;
 }
 
 
