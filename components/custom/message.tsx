@@ -5,11 +5,11 @@ import { motion } from "framer-motion";
 import { ReactNode } from "react";
 import { Streamdown } from "streamdown";
 
-import { BotIcon, UserIcon } from "./icons";
-import { PreviewAttachment } from "./preview-attachment";
-import { FeedbackButtons } from "./feedback-buttons";
-import { PlanActionButtons } from "./plan-action-buttons";
 import { ClarificationSuggestions } from "./clarification-suggestions";
+import { FeedbackButtons } from "./feedback-buttons";
+import { BotIcon, UserIcon } from "./icons";
+import { PlanActionButtons } from "./plan-action-buttons";
+import { PreviewAttachment } from "./preview-attachment";
 
 export const Message = ({
   chatId,
@@ -36,6 +36,36 @@ export const Message = ({
 }) => {
   const toolsUsed = toolInvocations?.map((inv) => inv.toolName) || [];
   
+  // Check if this is a status message that should be hidden
+  const isStatusMessage = (content: string): boolean => {
+    if (!content || typeof content !== "string") return false;
+    const statusPatterns = [
+      /^zaraz\s+/i,
+      /^teraz\s+/i,
+      /^rozumiem\s+/i,
+      /^pozwól\s+/i,
+      /^znalazłem\s+/i,
+      /^sprawdzę\s+/i,
+      /^pobiorę\s+/i,
+      /^szukam\s+/i,
+      /^najpierw\s+/i,
+      /\s+teraz\s+sprawdzę/i,
+      /\s+zaraz\s+sprawdzę/i,
+      /\s+teraz\s+pobiorę/i,
+      /\s+zaraz\s+pobiorę/i,
+      /sprawdzę\s+dostępną/i,
+      /znalazłem\s+tablicę/i,
+    ];
+    return statusPatterns.some(pattern => pattern.test(content.trim()));
+  };
+  
+  // Hide status messages that have active tool invocations
+  const shouldHideContent = role === "assistant" && 
+    typeof content === "string" && 
+    isStatusMessage(content) &&
+    toolInvocations && 
+    toolInvocations.some(inv => inv.state !== "result");
+  
   // Check if this is a clarification message (no tools, contains suggestions)
   const isClarificationMessage = 
     role === "assistant" && 
@@ -55,9 +85,16 @@ export const Message = ({
       </div>
 
       <div className="flex flex-col gap-2 w-full">
-        {content && typeof content === "string" && (
+        {content && typeof content === "string" && !shouldHideContent && (
           <div className="text-zinc-800 dark:text-zinc-300 flex flex-col gap-4">
             <Streamdown>{content}</Streamdown>
+          </div>
+        )}
+        
+        {/* Status messages are hidden - typing indicator will show instead */}
+        {shouldHideContent && (
+          <div className="text-sm text-muted-foreground italic opacity-50">
+            System pracuje...
           </div>
         )}
 

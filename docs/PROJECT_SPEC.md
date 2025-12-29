@@ -503,15 +503,25 @@ System implementuje następujące fallbacki, aby uniknąć halucynacji i nadgorl
 
 ### 4.8.2 Zbyt duże dane
 
-**Sytuacja:** Zapytanie zwróciłoby >100 rekordów lub przekroczyłoby budżet tokenów.
+**Sytuacja:** Zapytanie zwróciłoby więcej rekordów niż optymalny limit lub przekroczyłoby budżet tokenów.
+
+**Limity (research-based, szczegóły w `docs/PH06_CONTEXT_RESEARCH.md`):**
+- **Monday.com:** 30-50 rekordów (trigger "zawęź" przy >100 potencjalnych)
+- **Slack:** 15-25 wiadomości (trigger "zawęź" przy >50 wyników)
+- **Budżet tokenów na integracje:** 30-40K tokenów (15-25% z 200K context)
+
+**Uzasadnienie naukowe:**
+- "Lost in the Middle" (Liu et al., TACL 2024): informacje w środku kontekstu ignorowane
+- RAG saturation: >20 dokumentów nie poprawia jakości odpowiedzi
+- Efektywne wykorzystanie kontekstu: optymalne przy 70-75% (nie 100%)
 
 **Fallback:**
-- System **nie może** „dumpować” wszystkich danych do promptu
-- Działania:
-  1. Paginacja: pobierz tylko pierwszą stronę (np. top‑20)
-  2. Agregacja: zwróć summary + przykłady zamiast pełnej listy
-  3. Selekcja pól: tylko kluczowe kolumny, nie wszystkie
-  4. Zapytaj użytkownika: „Znaleziono 250 projektów. Zawęź do: [sugestie filtrów]?”
+- System **nie może** „dumpować" wszystkich danych do promptu
+- Działania (w kolejności degradacji):
+  1. Selekcja pól: tylko kluczowe kolumny, nie wszystkie
+  2. Paginacja: pobierz top-30 (Monday) lub top-15 (Slack)
+  3. Agregacja: zwróć summary + top przykłady zamiast pełnej listy
+  4. Zapytaj użytkownika: „Znaleziono 250 projektów. Zawęź do: [sugestie filtrów]?"
 
 ### 4.8.3 Niska pewność interpretacji / wieloznaczność
 
@@ -943,6 +953,8 @@ interface AIProvider {
 - [Monday.com MCP Setup](./MONDAY_MCP_SETUP.md)
 - [Use Cases](./USE_CASES.md) — szczegółowe scenariusze użycia (UC-01/02/03/04/05/06)
 - [Backlog Techniczny](./BACKLOG.md) — szczegółowy backlog zadań dla faz 01-06
+- [PH06 Context Research](./PH06_CONTEXT_RESEARCH.md) — research optymalnych limitów rekordów dla integracji (Lost in the Middle, RAG saturation)
+- [PH09 Status Suppression](./PH09_STATUS_SUPPRESSION.md) — dokumentacja implementacji ukrywania statusów pracy AI
 - ⚠️ [Phase 2 Plan - Production Roadmap](./PHASE_2_PLAN.md) — **DEPRECATED**: Zastąpiony przez sekcję 12 (Implementation Plan)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Vercel AI SDK](https://sdk.vercel.ai/docs)
@@ -983,6 +995,7 @@ Każda faza zawiera:
 | **06** | `phase/06-context-budget-hardening` | Context scaling + hardening | Budżet tokenów, degradacja, rate limiting | Testy dużych payloadów, manual: zawężanie zakresu |
 | **07** | `phase/07-ui-branding` | Nowa identyfikacja wizualna z Figma | globals.css, tailwind.config, komponenty UI | Testy wizualne, accessibility |
 | **08** | `phase/08-board-filters` | Stałe filtry per board Monday.com | Konfiguracja filtrów, silnik filtrowania, integracja | Testy filtrów, manual: weryfikacja filtrowania |
+| **09** | `phase/09-status-suppression` | Ukrycie statusów pracy AI | Client-side filtering, rozszerzone wzorce statusowe | Testy wzorców, manual: brak statusów w UI |
 
 ### 12.3 Szczegóły faz
 
@@ -1184,6 +1197,39 @@ Każda faza zawiera:
 - **Testy manualne**:
   - Zapytanie o board z filtrem → mniej rekordów niż bez filtra
   - Sprawdzenie logów → widoczne "Filtered: X -> Y items"
+
+#### Faza 09 — UI Status Messages Suppression
+
+- **Branch**: `phase/09-status-suppression`
+- **Cel**: Ukrycie wewnętrznych statusów pracy AI (np. "Zaraz sprawdzę...", "Teraz pobiorę...", "Świetnie! Znalazłem...") od użytkownika końcowego
+- **Problem do rozwiązania**: Model AI generuje komunikaty statusowe mimo instrukcji w system prompt. Te wiadomości zaśmiecają UI i nie wnoszą wartości dla użytkownika.
+- **Zakres**:
+  - Rozszerzenie client-side filtering w `components/custom/message.tsx`:
+    - Usunięcie warunku `toolInvocations.some(inv => inv.state !== "result")` — statusy ukrywane zawsze, nie tylko podczas aktywnych tool calls
+    - Rozszerzenie listy wzorców statusowych (dodanie nowych fraz)
+    - Dodanie warunku długości (`content.length < 200`) — krótkie wiadomości bez merytorycznej treści to statusy
+  - Rozszerzenie wzorców statusowych:
+    - Początek zdania: "Zaraz", "Teraz", "Rozumiem", "Pozwól", "Znalazłem", "Sprawdzę", "Pobiorę", "Szukam", "Najpierw", "Świetnie!", "Dobrze!", "Ok!"
+    - Frazy pośrednie: "z workspace", "z każdego boardu", "mam ograniczony dostęp", "do którego boardu"
+  - Opcjonalnie: CSS transition dla smooth hiding (eliminacja "migotania" statusów)
+  - Synchronizacja z logiką w `app/(chat)/api/chat/route.ts` (funkcja `isStatusMessage`)
+- **Poza zakresem**: 
+  - Server-side stream transformation (Vercel AI SDK 3.x nie wspiera dobrze `experimental_transform`)
+  - Zmiana system prompt (już maksymalnie zoptymalizowany, problem leży w zachowaniu modelu)
+- **Entry criteria**: Faza 08 zakończona
+- **Exit criteria**:
+  - Statusy typu "Zaraz sprawdzę...", "Teraz pobiorę...", "Świetnie! Znalazłem..." **nie są wyświetlane** użytkownikowi
+  - Tylko finalne odpowiedzi z merytoryczną treścią są widoczne
+  - Typing indicator ("System pracuje...") pokazuje się podczas pracy systemu
+  - Historia czatu nie zawiera statusowych wiadomości (już zaimplementowane w `onFinish`)
+- **Testy automatyczne**:
+  - Test: `isStatusMessage()` wykrywa wszystkie wzorce statusowe
+  - Test: `shouldHideContent` ukrywa statusy niezależnie od stanu tool invocations
+  - Test: wiadomości >200 znaków z treścią merytoryczną NIE są ukrywane
+- **Testy manualne**:
+  - Zadaj pytanie wymagające tool calls → statusy nie są widoczne, tylko typing indicator
+  - Tylko finalna odpowiedź z wynikami jest wyświetlona
+  - Odśwież stronę → historia nie zawiera statusowych wiadomości
 
 ### 12.4 Backlog techniczny
 

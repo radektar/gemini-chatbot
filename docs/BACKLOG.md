@@ -531,16 +531,33 @@ Backlog zadań technicznych podzielony na epiki odpowiadające fazom wdrożenia.
 - **Priorytet**: P1
 - **Zależności**: PH06-CONTEXT-001
 - **Opis**: Ograniczenie rozmiaru danych z integracji przed wstrzyknięciem do promptu
+- **Research**: Szczegółowe uzasadnienie limitów w `docs/PH06_CONTEXT_RESEARCH.md`
+- **Uzasadnienie naukowe**:
+  - **"Lost in the Middle"** (Liu et al., TACL 2024): Modele mają U-kształtną krzywą uwagi - informacje w środku kontekstu są ignorowane (spadek accuracy do 20%)
+  - **RAG saturation**: Badania pokazują, że >20 dokumentów nie poprawia jakości odpowiedzi
+  - **Token estimation**: Monday item ~150-300 tokenów, Slack message ~100-300 tokenów
+  - **Efektywne wykorzystanie**: Optymalne przy 70-75% context window (nie max)
 - **Definition of Done**:
-  - Monday: maksymalnie 50 rekordów na request, selekcja pól, agregacja
-  - Slack: maksymalnie 20 wiadomości na request, selekcja pól
-  - Jeśli więcej → system prosi o zawężenie zakresu
+  - Monday: **30-50 rekordów** na request (domyślnie 30), selekcja pól, agregacja
+  - Slack: **15-25 wiadomości** na request (domyślnie 15), selekcja pól
+  - Trigger "zawęź zakres": Monday >100 potencjalnych rekordów, Slack >50 wyników
+  - Kompaktowy JSON (bez pretty-print) - oszczędność ~50% tokenów
+  - Budżet dla danych integracji: 30-40K tokenów (15-25% z 200K context)
+- **Strategie degradacji** (w kolejności):
+  1. Selekcja pól (tylko kluczowe kolumny)
+  2. Redukcja liczby rekordów (top-N najbardziej relevant)
+  3. Agregacja (summary zamiast pełnych danych)
+  4. Pytanie użytkownika o zawężenie
 - **Testy automatyczne**:
-  - Test: Monday zwraca max 50 rekordów
-  - Test: Slack zwraca max 20 wiadomości
+  - Test: Monday zwraca max 50 rekordów (konfigurowalny limit)
+  - Test: Slack zwraca max 25 wiadomości (konfigurowalny limit)
+  - Test: Trigger "zawęź zakres" przy >100 rekordów Monday
+  - Test: Kompaktowy JSON output (bez whitespace)
+  - Test: Token estimation dla sample payload
 - **Testy manualne**:
-  - Zapytanie o duży board → system proponuje zawężenie lub zwraca summary
-  - Zapytanie o długi Slack thread → system zwraca ostatnie 20 wiadomości
+  - Zapytanie o duży board (>100 items) → system proponuje zawężenie z liczbą rekordów
+  - Zapytanie o długi Slack thread → system zwraca ostatnie 15-25 wiadomości
+  - Sprawdzenie logów → widoczne "Payload: X items, ~Y tokens"
 
 ### PH06-CONTEXT-004: Rate limiting per user (opcjonalnie)
 - **Priorytet**: P2
