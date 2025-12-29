@@ -319,3 +319,4 @@ Po wykonaniu testów manualnych:
 **Ostatnia aktualizacja:** 2025-12-19
 
 
+

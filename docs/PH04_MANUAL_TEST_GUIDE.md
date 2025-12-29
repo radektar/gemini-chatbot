@@ -507,3 +507,4 @@ Po wykonaniu testów manualnych:
 **Ostatnia aktualizacja:** 2025-01-XX
 
 
+
