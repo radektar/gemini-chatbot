@@ -78,7 +78,9 @@ export async function extractIntent(
     : "";
   
   const { object } = await generateObject({
-    model: geminiProModel,
+    // Type conflict workaround: @ai-sdk/ui-utils has nested @ai-sdk/provider with different types
+    // This is a known npm dependency duplication issue - using type assertion as workaround
+    model: geminiProModel as any,
     schema: QueryContextSchema,
     prompt: `
 You are an expert at extracting intent from user queries. Analyze the following query and extract all available information, assigning a confidence level (0-1) to each element.

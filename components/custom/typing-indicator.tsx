@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+
 import { BotIcon } from "./icons";
 
 type Phase = "analyzing" | "fetching" | "preparing";

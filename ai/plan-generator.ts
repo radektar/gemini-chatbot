@@ -4,7 +4,8 @@ import { QueryContext } from "./types";
 
 export async function generatePlan(queryContext: QueryContext): Promise<string> {
   const { text } = await generateText({
-    model: geminiProModel,
+    // Type conflict workaround: @ai-sdk/ui-utils has nested @ai-sdk/provider with different types
+    model: geminiProModel as any,
     prompt: `
 Na podstawie poniższego kontekstu zapytania, wygeneruj czytelny plan działania w języku polskim.
 

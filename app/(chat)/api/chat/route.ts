@@ -2,6 +2,13 @@ import { convertToCoreMessages, Message, streamText } from "ai";
 import { z } from "zod";
 
 import { geminiProModel } from "@/ai";
+import {
+  allocateBudget,
+  calculateCurrentUsage,
+  shouldDegrade,
+  DegradationLevel,
+  getDegradationMessage,
+} from "@/ai/context-budget";
 import { extractIntent } from "@/ai/intent-extraction";
 import { generatePlan } from "@/ai/plan-generator";
 import { auth } from "@/app/(auth)/auth";
@@ -125,7 +132,8 @@ export async function POST(request: Request) {
   // If we need clarification, return a clarification response instead of tool calls
   if (shouldAskForClarification && clarificationQuestion) {
     const clarificationResponse = await streamText({
-      model: geminiProModel,
+      // Type conflict workaround: @ai-sdk/ui-utils has nested @ai-sdk/provider with different types
+      model: geminiProModel as any,
       system: `
         You are an organizational assistant. You help employees with:
         - Reviewing tasks from Monday.com (using MCP - READ ONLY)
@@ -435,8 +443,39 @@ export async function POST(request: Request) {
 
   // isPlanConfirmation is already set at the top of the function
 
+  // Helper function to detect status messages
+  const isStatusMessage = (content: string): boolean => {
+    if (!content || typeof content !== "string") return false;
+    const statusPatterns = [
+      /^zaraz\s+/i,
+      /^teraz\s+/i,
+      /^rozumiem\s+/i,
+      /^pozwól\s+/i,
+      /^znalazłem\s+/i,
+      /^sprawdzę\s+/i,
+      /^pobiorę\s+/i,
+      /^szukam\s+/i,
+      /^najpierw\s+/i,
+      /\s+teraz\s+sprawdzę/i,
+      /\s+zaraz\s+sprawdzę/i,
+      /\s+teraz\s+pobiorę/i,
+      /\s+zaraz\s+pobiorę/i,
+      /sprawdzę\s+dostępną/i,
+      /znalazłem\s+tablicę/i,
+    ];
+    return statusPatterns.some(pattern => pattern.test(content.trim()));
+  };
+
   // Build system prompt with plan if available
   let systemPrompt = `
+    ⚠️ ABSOLUTE RULE - NO STATUS MESSAGES ⚠️
+    You MUST NEVER generate text before using tools. When you need to use tools:
+    1. Use tools IMMEDIATELY without any text before
+    2. Only AFTER all tools complete, generate the final response with results
+    3. NEVER say: "Zaraz sprawdzę...", "Teraz pobiorę...", "Rozumiem...", "Pozwól że...", "Znalazłem...", "Sprawdzę dostępną..."
+    4. NEVER describe what you are about to do or what you found during search
+    5. The UI shows "system is working" - you don't need status messages
+    
     You are an organizational assistant. You help employees with:
     - Reviewing tasks from Monday.com (using MCP - READ ONLY)
     - Searching conversation history from Slack
@@ -453,6 +492,25 @@ export async function POST(request: Request) {
     - Present information in a clear, organized manner (use bullet points, headings when appropriate)
     - If you find multiple items, summarize the key insights and list only the most relevant ones
     - Act like Perplexity AI - process the data and present conclusions, not raw data
+    
+    NO STATUS MESSAGES - CRITICAL RULE (MANDATORY - REPEATED):
+    - DO NOT generate messages about what you are doing or planning to do
+    - DO NOT show intermediate steps or progress updates
+    - DO NOT explain what tools you are using or what you are about to do
+    - DO NOT say "Zaraz", "Teraz", "Rozumiem", "Pozwól", "Znalazłem", "Sprawdzę" when describing actions
+    - Simply execute tools silently and present ONLY the final results
+    - The user interface already shows "system is working" animation - you don't need to add status messages
+    - Your response should contain ONLY the final answer/results, never status updates or action descriptions
+    - BEFORE using tools: Use them immediately, NO text before
+    - AFTER using tools: Show only the final results
+    - Example of BAD responses (NEVER generate these):
+      * "Zaraz sprawdzę wszystkie dostępne workspace'i..."
+      * "Teraz sprawdzę wszystkie workspace'i..."
+      * "Znalazłem tablicę 'Projects'..."
+      * "Sprawdzę dostępną tablicę..."
+      * "Teraz szukam projektów..."
+      * "Rozumiem - mam ograniczony dostęp..."
+    - Example of GOOD response: Directly show the results: "Oto wszystkie projekty z Kenii ze statusem 'W trakcie': [list of projects]"
     
     EVIDENCE POLICY - MANDATORY FORMAT (Faza 05):
     Your response MUST follow this structure when presenting data with numbers/metrics/facts:
@@ -500,6 +558,19 @@ export async function POST(request: Request) {
       - NO item lists, NO summaries, NO examples
     - NEVER display records if "_warning" is present - this is a MANDATORY rule
     
+    MONDAY.COM WORKSPACE SEARCH - CRITICAL RULES (MANDATORY):
+    - When user asks for projects/boards/items from Monday.com, you MUST automatically:
+      1. First, use "list_workspaces" tool to get ALL available workspaces (DO NOT ask user which workspace)
+      2. Then, search through ALL available workspaces automatically using appropriate tools:
+         - Use "workspace_info" for each workspace to get boards
+         - Use "search" tool with searchType="BOARD" to find boards across all workspaces
+         - Use "get_board_items_page" or "get_board_items" to get items from boards
+      3. NEVER ask the user "which workspace should I search?" or "in which workspace are the projects?"
+      4. You have access to all workspaces - automatically check all of them
+      5. If you need to search for specific items/projects, use the "search" tool or iterate through workspaces
+    - The user should NOT need to specify workspace - you automatically search all accessible workspaces
+    - Only ask for clarification if you need MORE SPECIFIC filters (e.g., status, geography, time period), NOT about workspace location
+    
     Respond concisely and specifically. Use tools when the user asks for access to data from Monday or Slack.
   `;
 
@@ -509,10 +580,12 @@ export async function POST(request: Request) {
       systemPrompt += `\n\nPLAN TO EXECUTE (USER CONFIRMED):\n${plan}\n\nCRITICAL INSTRUCTIONS:
 1. The user has CONFIRMED this plan - EXECUTE IT NOW
 2. DO NOT ask any questions - you already have all the information you need
-3. Use the Monday.com MCP tools (list_boards, get_board_items, search_items_by_column_value) to search for data
-4. If the plan mentions "education projects in Kenya" or similar, use search tools with those keywords
-5. Start by listing boards or searching directly - DO NOT ask where to search
-6. Format the results according to the plan (e.g., for donor = professional summary with impact metrics)`;
+3. AUTOMATICALLY search ALL available workspaces - use "list_workspaces" first, then search through all workspaces
+4. Use the Monday.com MCP tools (list_workspaces, workspace_info, search, get_board_items_page) to search for data
+5. If the plan mentions "education projects in Kenya" or similar, use search tools with those keywords across ALL workspaces
+6. DO NOT ask which workspace to search - automatically check all available workspaces
+7. Format the results according to the plan (e.g., for donor = professional summary with impact metrics)
+8. DO NOT generate status messages like "Zaraz sprawdzę...", "Teraz pobiorę..." - execute tools silently and show ONLY final results`;
     } else {
       // Plan is being presented for the first time - MUST present it and NOT use tools yet
       systemPrompt += `\n\nPLAN TO PRESENT:\n${plan}\n\nIMPORTANT: 
@@ -521,6 +594,47 @@ export async function POST(request: Request) {
 3. After presenting the plan, ask: "Czy chcesz coś zmienić w tym planie?" or "Czy mogę wykonać ten plan?"
 4. ONLY AFTER USER CONFIRMATION use tools according to the plan`;
     }
+  }
+
+  // Context budget management (PH06)
+  const contextBudget = allocateBudget(200_000);
+  let finalMessages = coreMessages;
+  
+  // Calculate current usage before tool calls
+  const currentUsage = calculateCurrentUsage({
+    systemPrompt,
+    messages: coreMessages,
+  });
+  
+  // Check if degradation is needed
+  const degradationLevel = shouldDegrade(currentUsage, contextBudget);
+  
+  // Apply degradation strategies
+  if (degradationLevel === DegradationLevel.COMPRESS_HISTORY) {
+    // Sliding window: keep last 10 messages (5 exchanges)
+    const maxHistoryMessages = 10;
+    if (coreMessages.length > maxHistoryMessages) {
+      const keepFromIndex = coreMessages.length - maxHistoryMessages;
+      finalMessages = [
+        ...coreMessages.slice(0, 2), // Keep first system/user exchange for context
+        ...coreMessages.slice(keepFromIndex), // Keep last N messages
+      ];
+      console.log(
+        `[Context Budget] Compressed history: ${coreMessages.length} → ${finalMessages.length} messages`
+      );
+    }
+  }
+  
+  // Log budget usage
+  const usagePercent = (currentUsage / contextBudget.total) * 100;
+  console.log(
+    `[Context Budget] Usage: ${currentUsage.toLocaleString()}/${contextBudget.total.toLocaleString()} tokens ` +
+    `(${usagePercent.toFixed(1)}%), Degradation: ${degradationLevel}`
+  );
+  
+  // If critical degradation, add warning to system prompt
+  if (degradationLevel === DegradationLevel.ASK_USER) {
+    systemPrompt += `\n\n⚠️ WARNING: Context budget nearly exhausted. Prioritize concise responses and ask user to narrow scope if needed.`;
   }
 
   // Only provide tools if plan is confirmed or there's no plan
@@ -545,16 +659,32 @@ export async function POST(request: Request) {
   } : {};
 
   const result = await streamText({
-    model: geminiProModel,
+    // Type conflict workaround: @ai-sdk/ui-utils has nested @ai-sdk/provider with different types
+    model: geminiProModel as any,
     system: systemPrompt,
-    messages: coreMessages,
+    messages: finalMessages, // Use compressed messages if degradation applied
     tools: toolsToUse,
     onFinish: async ({ responseMessages }) => {
       if (session.user && session.user.id) {
         try {
+          // Filter out status messages from saved messages
+          const filteredMessages = responseMessages.map((msg) => {
+            if (msg.role === "assistant" && typeof msg.content === "string") {
+              // If message is a status message and has tool invocations, remove the text content
+              // This prevents status messages from being saved to the database
+              if (isStatusMessage(msg.content) && msg.toolInvocations && msg.toolInvocations.length > 0) {
+                return {
+                  ...msg,
+                  content: "", // Remove status message text, keep tool invocations
+                };
+              }
+            }
+            return msg;
+          });
+          
           await saveChat({
             id,
-            messages: [...coreMessages, ...responseMessages],
+            messages: [...coreMessages, ...filteredMessages],
             userId: session.user.id,
           });
         } catch (error) {

@@ -1,5 +1,38 @@
 # Monday.com MCP Setup Guide
 
+## ⚠️ Wymagania wersji Node.js
+
+**WAŻNE**: Monday.com MCP wymaga **Node.js 20-23.x**. Node.js 24+ NIE jest wspierane z powodu problemów z kompilacją natywnych modułów (`isolated-vm`).
+
+### Sprawdź wersję Node.js:
+```bash
+node --version
+```
+
+### Jeśli masz Node.js 24+:
+
+**macOS (Homebrew):**
+```bash
+# Zainstaluj Node.js 22 LTS
+brew install node@22
+
+# Opcja A: Użyj globalnie (zmień domyślną wersję)
+brew unlink node
+brew link node@22 --force
+
+# Opcja B: Projekt automatycznie używa Node.js 22 dla MCP
+# (skonfigurowane w integrations/mcp/monday.ts)
+```
+
+**Linux/Windows:**
+```bash
+# Użyj nvm (Node Version Manager)
+nvm install 22
+nvm use 22
+```
+
+---
+
 ## Krok 1: Uzyskaj Monday.com API Token
 
 1. Zaloguj się do Monday.com
@@ -90,11 +123,33 @@ Po wyłączeniu, chatbot będzie miał dostęp do **wszystkich tablic** dostępn
 ### Problem: "MONDAY_API_TOKEN not set"
 **Rozwiązanie**: Sprawdź czy token jest w pliku `.env.local` i czy plik jest w głównym katalogu projektu
 
-### Problem: "Failed to initialize MCP servers"
+### Problem: "Failed to initialize MCP servers" / "Connection closed" (MCP error -32000)
 **Rozwiązanie**: 
-- Sprawdź czy token jest poprawny
-- Sprawdź czy masz dostęp do internetu (npx pobiera pakiet)
-- Sprawdź logi w konsoli dla szczegółów błędu
+1. **Sprawdź wersję Node.js** - najczęstsza przyczyna!
+   ```bash
+   node --version
+   ```
+   - Jeśli masz Node.js 24+, zainstaluj Node.js 22 LTS (zobacz sekcję "Wymagania wersji Node.js" na górze)
+   
+2. Sprawdź czy token jest poprawny:
+   ```bash
+   curl -X POST https://api.monday.com/v2 \
+     -H "Content-Type: application/json" \
+     -H "Authorization: $MONDAY_API_TOKEN" \
+     -d '{"query": "{ me { name } }"}'
+   ```
+   
+3. Sprawdź czy masz dostęp do internetu (npx pobiera pakiet)
+4. Sprawdź logi w konsoli dla szczegółów błędu
+
+### Problem: "gyp ERR! build error" / "error: unknown type name 'concept'"
+**Rozwiązanie**: To jest błąd kompilacji natywnych modułów na Node.js 24+. Zainstaluj Node.js 22 LTS:
+```bash
+# macOS
+brew install node@22
+
+# Projekt automatycznie użyje Node.js 22 dla MCP
+```
 
 ### Problem: "Blocked write operation"
 **Rozwiązanie**: To jest normalne - operacje write są blokowane w trybie read-only. Użyj tylko operacji odczytu.

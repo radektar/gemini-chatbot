@@ -2,6 +2,11 @@
   "name": "impact-chad",
   "version": "0.1.1",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0 <24.0.0",
+    "npm": ">=10.0.0"
+  },
+  "engineStrict": true,
   "scripts": {
     "dev": "next dev",
     "build": "tsx db/migrate && next build",
@@ -10,7 +15,7 @@
     "test:board-filter": "tsx scripts/test-board-filtering.ts"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.2.12",
+    "@ai-sdk/anthropic": "^1.0.0",
     "@ai-sdk/google": "^0.0.51",
     "@modelcontextprotocol/sdk": "^1.24.3",
     "@radix-ui/react-alert-dialog": "^1.1.2",

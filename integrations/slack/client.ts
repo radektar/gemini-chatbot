@@ -1,6 +1,7 @@
 "use server";
 
 import { WebClient } from "@slack/web-api";
+import { processSlackPayload } from "@/lib/slack-payload-control";
 
 // Read token in runtime, not at module load time (allows dotenv to load it first)
 function getSlackBotToken(): string {
@@ -78,8 +79,11 @@ export async function getChannels(): Promise<SlackChannel[]> {
 export async function getChannelHistory(
   channelId: string,
   oldest?: string,
-  limit: number = 200,
+  limit?: number,
 ): Promise<SlackMessage[]> {
+  // Default limit: 15 messages (configurable via env)
+  const defaultLimit = parseInt(process.env.SLACK_MAX_MESSAGES || "15", 10);
+  const finalLimit = limit ?? defaultLimit;
   try {
     // Audit logging
     console.log(`[Slack Audit] ${new Date().toISOString()} | Operation: getChannelHistory | Channel: ${channelId} | Limit: ${limit}`);
@@ -95,13 +99,35 @@ export async function getChannelHistory(
       throw new Error(result.error || "Failed to fetch channel history");
     }
 
-    return result.messages.map((msg) => ({
+    const rawMessages = result.messages.map((msg) => ({
       ts: msg.ts!,
       user: msg.user,
       text: msg.text || "",
       thread_ts: msg.thread_ts,
       reply_count: msg.reply_count,
     }));
+
+    // Apply payload control (limit messages, estimate tokens)
+    const processed = processSlackPayload(rawMessages, {
+      maxMessages: parseInt(process.env.SLACK_MAX_MESSAGES || "15", 10),
+      triggerNarrowAt: parseInt(process.env.SLACK_TRIGGER_NARROW_AT || "50", 10),
+      compactJson: true,
+    });
+
+    // Log payload info
+    console.log(
+      `[Slack Payload] Channel: ${channelId}, Original: ${processed.originalCount} messages, ` +
+      `Processed: ${processed.messages.length} messages, ~${processed.tokenEstimate} tokens`
+    );
+
+    // If should narrow, log warning (but still return limited messages)
+    if (processed.shouldNarrow) {
+      console.warn(
+        `[Slack Payload] Found ${processed.originalCount} messages, consider narrowing search scope`
+      );
+    }
+
+    return processed.messages;
   } catch (error) {
     console.error(`Error fetching history for channel ${channelId}:`, error);
     throw error;
@@ -132,13 +158,15 @@ export async function getAllChannelHistory(
         throw new Error(result.error || "Failed to fetch channel history");
       }
 
-      allMessages.push(...result.messages.map((msg) => ({
+      const batchMessages = result.messages.map((msg) => ({
         ts: msg.ts!,
         user: msg.user,
         text: msg.text || "",
         thread_ts: msg.thread_ts,
         reply_count: msg.reply_count,
-      })));
+      }));
+
+      allMessages.push(...batchMessages);
 
       cursor = result.response_metadata?.next_cursor;
       
@@ -152,6 +180,27 @@ export async function getAllChannelHistory(
     }
   } while (cursor);
 
-  return allMessages;
+  // Apply payload control to final result
+  const processed = processSlackPayload(allMessages, {
+    maxMessages: parseInt(process.env.SLACK_MAX_MESSAGES || "15", 10),
+    triggerNarrowAt: parseInt(process.env.SLACK_TRIGGER_NARROW_AT || "50", 10),
+    compactJson: true,
+  });
+
+  // Log payload info
+  console.log(
+    `[Slack Payload] getAllChannelHistory - Channel: ${channelId}, ` +
+    `Original: ${processed.originalCount} messages, ` +
+    `Processed: ${processed.messages.length} messages, ~${processed.tokenEstimate} tokens`
+  );
+
+  // If should narrow, log warning
+  if (processed.shouldNarrow) {
+    console.warn(
+      `[Slack Payload] Found ${processed.originalCount} messages, consider narrowing search scope`
+    );
+  }
+
+  return processed.messages;
 }
 

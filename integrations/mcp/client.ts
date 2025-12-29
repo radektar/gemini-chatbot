@@ -22,10 +22,23 @@ export class MCPClientManager {
       version: "1.0.0",
     });
 
+    // Filter out undefined values from process.env and config.env
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) {
+        env[key] = value;
+      }
+    }
+    for (const [key, value] of Object.entries(config.env || {})) {
+      if (value !== undefined) {
+        env[key] = value;
+      }
+    }
+
     const transport = new StdioClientTransport({
       command: config.command,
       args: config.args || [],
-      env: { ...process.env, ...config.env },
+      env,
     });
 
     await client.connect(transport);

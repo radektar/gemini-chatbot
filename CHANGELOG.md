@@ -5,6 +5,103 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-12-29
+
+### Added
+- **Faza 06 - Context Budget Hardening**: Implementacja zarządzania budżetem tokenów i payload control zgodnie z BACKLOG PH06-CONTEXT-001/002/003/004
+  - **Monday.com Payload Control**: Automatyczne limitowanie rekordów do 30 (konfigurowalny `MONDAY_MAX_RECORDS`)
+    - Trigger "zawęź zakres" przy >100 rekordach (konfigurowalny `MONDAY_TRIGGER_NARROW_AT`)
+    - Metadata: `_warning`, `_total_count`, `_displayed_count` dla Stop & Ask
+    - Kompaktowa serializacja JSON (~50% redukcja rozmiaru)
+    - Token estimation: ~2,094 tokenów/rekord dla projektów Monday.com
+  - **Slack Payload Control**: Automatyczne limitowanie wiadomości do 15 (konfigurowalny `SLACK_MAX_MESSAGES`)
+    - Trigger "zawęź zakres" przy >50 wynikach (konfigurowalny `SLACK_TRIGGER_NARROW_AT`)
+    - Integracja z systemem cache/sync (`getAllChannelHistory`)
+  - **Context Budget Management**: Alokacja 200K budżetu tokenów z research-backed thresholds
+    - Percentage-based degradation (75%, 80%, 85%, 90% thresholds)
+    - 5 poziomów degradacji: none → reduce_records → compress_history → aggregate → ask_user
+    - Sliding window compression (keep last 10 messages + first 2 for context)
+    - Real-time logging: `[Context Budget] Usage: X/Y tokens (Z%), Degradation: level`
+  - **Integracja z istniejącymi funkcjami**:
+    - Stop & Ask: automatyczne reagowanie na metadata z payload control
+    - Evidence Policy: limitowane dane przed walidacją
+    - Plan-first: context budget obliczany po generowaniu planu
+
+### Changed
+- **lib/monday-payload-control.ts**: Nowy moduł payload control dla Monday.com
+  - `processMondayPayload()`: limitowanie, kompaktyzacja, token estimation
+  - `shouldTriggerNarrowWarning()`: detekcja przekroczenia progu
+  - `compactJson()`: redukcja rozmiaru JSON o ~50%
+- **lib/slack-payload-control.ts**: Nowy moduł payload control dla Slack
+  - `processSlackPayload()`: limitowanie wiadomości, token estimation
+  - Integracja z `getAllChannelHistory` dla pełnej historii kanału
+- **ai/context-budget.ts**: Nowy moduł zarządzania budżetem tokenów
+  - `allocateBudget()`: alokacja budżetu dla 200K context window
+  - `calculateCurrentUsage()`: obliczanie aktualnego użycia tokenów
+  - `shouldDegrade()`: określanie poziomu degradacji
+  - `estimateTokens()`, `estimateJsonTokens()`: estymacja tokenów
+- **app/(chat)/api/chat/route.ts**: 
+  - Integracja context budget przed wykonaniem tools (linia 599-633)
+  - Kompresja historii przy degradacji COMPRESS_HISTORY
+  - Logowanie budżetu przy każdym zapytaniu
+- **integrations/mcp/init.ts**: 
+  - Integracja payload control w `callMondayMCPTool()` (linia 222-266)
+  - Automatyczne dodawanie metadata dla Stop & Ask
+- **integrations/slack/client.ts**:
+  - Integracja payload control w `getChannelHistory()` i `getAllChannelHistory()`
+
+### Performance
+- **Payload reduction**: 1988 rekordów Monday.com → 25 rekordów = **98.7% redukcja**
+- **Token optimization**: 25 rekordów = ~52,360 tokenów (zamiast ~4.1M dla wszystkich)
+- **Context budget**: Degradacja włącza się przy 75% użycia (150k tokenów)
+- **Compression**: Sliding window redukuje historię zachowując kontekst
+
+### Testing
+- **Testy automatyczne**: 6/6 testów degradacyjnych przeszło (100%)
+  - ✅ Context Budget: wszystkie 5 poziomów degradacji (none, reduce_records, compress_history, aggregate, ask_user)
+  - ✅ Token estimation: dokładność ~4 chars = 1 token
+  - ✅ Kompresja: zachowanie pierwszych 2 + ostatnich 10 wiadomości
+- **Testy manualne (przeglądarka)**: 4/4 kluczowe scenariusze przeszły
+  - ✅ A1: Monday.com limit 30 rekordów (25 zwróconych, ~52k tokenów)
+  - ✅ A2: Trigger "zawęź zakres" (1988 rekordów → warning + Stop & Ask)
+  - ✅ C2: Context Budget logowanie (widoczne w każdym zapytaniu)
+- **Testy integracyjne**: 3/3 zweryfikowane
+  - ✅ D1: Payload control + Stop & Ask (automatyczne warning przy 1988 rekordach)
+  - ✅ D2: Payload control + Evidence Policy (limitowane dane)
+  - ✅ D3: Payload control + Plan-first (prawidłowa kolejność)
+- **Skrypt testowy**: `scripts/test-context-degradation.ts` - automated degradation testing
+- **Dokumentacja testów**:
+  - `docs/PH06_MANUAL_TEST_RESULTS.md` (256 linii)
+  - `docs/PH06_AUTOMATED_TEST_RESULTS.md` (176 linii)
+  - `docs/PH06_TEST_SUMMARY.md` (171 linii)
+
+### Documentation
+- **docs/PH06_CONTEXT_RESEARCH.md**: Research notes on context budget optimization
+- **docs/PH06_MANUAL_TESTING_GUIDE.md**: Comprehensive manual testing guide
+- **docs/PH06_TEST_QUERIES.md**: Test queries for Monday.com and Slack
+- **scripts/test-context-degradation.ts**: Automated testing script (116 linii)
+
+---
+
+## [0.2.4] - 2025-12-29
+
+### Fixed
+- **Monday.com MCP - Node.js compatibility**: Naprawiono problem z połączeniem do Monday.com MCP
+  - **Przyczyna**: Node.js v24+ ma problemy z kompilacją natywnych modułów (`isolated-vm`) wymaganych przez `@mondaydotcomorg/monday-api-mcp`
+  - **Rozwiązanie**: Konfiguracja MCP używa teraz Node.js 22 LTS przez Homebrew (`/opt/homebrew/opt/node@22/bin/npx`)
+  - **integrations/mcp/monday.ts**: Zmieniono command z `npx` na `/opt/homebrew/opt/node@22/bin/npx` z odpowiednim PATH
+
+### Changed
+- **package.json**: Dodano pole `engines` z wymaganiami wersji Node.js
+  - `node`: `>=20.0.0 <24.0.0` - Node.js 24+ nie jest wspierane z powodu problemów z MCP
+  - `npm`: `>=10.0.0`
+  - `engineStrict: true` - wymusza sprawdzanie wersji
+
+### Requirements
+- **Node.js 20-23.x LTS** (zalecane: Node.js 22)
+- Node.js 24+ nie jest wspierane z powodu problemów z kompilacją `isolated-vm`
+- Na macOS z Homebrew: `brew install node@22`
+
 ## [0.2.3] - 2025-12-23
 
 ### Changed

@@ -107,7 +107,7 @@ function showConfiguration() {
   logSection("Step 1: Current Configuration");
 
   const hasToken = !!process.env.MONDAY_API_TOKEN;
-  const tokenPrefix = hasToken
+  const tokenPrefix = hasToken && process.env.MONDAY_API_TOKEN
     ? `${process.env.MONDAY_API_TOKEN.substring(0, 10)}...`
     : "NOT SET";
   const mcpConfig = getMondayMCPConfig();

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { ThumbsUp, ThumbsDown, Check } from "lucide-react";
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -85,22 +86,22 @@ export function FeedbackButtons({
     <div className="flex flex-col gap-2 mt-2">
       <div className="flex items-center gap-2">
         <Button
-          variant={state === "submitted" && rating === 1 ? "default" : "ghost"}
+          variant="ghost"
           size="sm"
           onClick={() => handleFeedback(1)}
-          disabled={state === "submitting" || state === "submitted"}
-          className={`h-8 px-2 ${state === "submitting" && rating === 1 ? "opacity-50 cursor-wait" : ""} ${state === "submitted" && rating === 1 ? "bg-green-100 hover:bg-green-100 dark:bg-green-900 dark:hover:bg-green-900" : ""}`}
+          disabled={state === "submitting"}
+          className={`h-8 px-2 ${state === "submitting" && rating === 1 ? "opacity-50 cursor-wait" : ""}`}
         >
-          <ThumbsUp className={`h-4 w-4 ${state === "submitted" && rating === 1 ? "text-green-600 dark:text-green-400" : ""}`} />
+          <ThumbsUp className="h-4 w-4" />
         </Button>
         <Button
-          variant={state === "submitted" && rating === -1 ? "default" : "ghost"}
+          variant="ghost"
           size="sm"
           onClick={() => handleFeedback(-1)}
-          disabled={state === "submitting" || state === "submitted"}
-          className={`h-8 px-2 ${state === "submitting" && rating === -1 ? "opacity-50 cursor-wait" : ""} ${state === "submitted" && rating === -1 ? "bg-red-100 hover:bg-red-100 dark:bg-red-900 dark:hover:bg-red-900" : ""}`}
+          disabled={state === "submitting"}
+          className={`h-8 px-2 ${state === "submitting" && rating === -1 ? "opacity-50 cursor-wait" : ""}`}
         >
-          <ThumbsDown className={`h-4 w-4 ${state === "submitted" && rating === -1 ? "text-red-600 dark:text-red-400" : ""}`} />
+          <ThumbsDown className="h-4 w-4" />
         </Button>
         {state === "submitting" && (
           <span className="text-xs text-muted-foreground ml-2">Zapisywanie...</span>
@@ -119,7 +120,7 @@ export function FeedbackButtons({
               variant="outline"
               size="sm"
               onClick={() => handleFeedback(-1)}
-              disabled={state === "submitting"}
+              disabled={false}
             >
               Wyślij
             </Button>

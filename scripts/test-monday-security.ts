@@ -12,7 +12,7 @@ import {
   filterReadOnlyTools,
   READ_ONLY_MONDAY_TOOLS,
   WRITE_OPERATIONS_BLACKLIST,
-} from "@/integrations/mcp/monday-readonly";
+} from "@/lib/monday-readonly";
 import { callMondayMCPTool } from "@/integrations/mcp/init";
 
 // Color codes for terminal output
