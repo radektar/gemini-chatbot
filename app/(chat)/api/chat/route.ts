@@ -669,18 +669,37 @@ export async function POST(request: Request) {
         try {
           // Filter out status messages from saved messages
           const filteredMessages = responseMessages.map((msg) => {
-            if (msg.role === "assistant" && typeof msg.content === "string") {
-              // If message is a status message and has tool invocations, remove the text content
-              // This prevents status messages from being saved to the database
-              if (isStatusMessage(msg.content) && msg.toolInvocations && msg.toolInvocations.length > 0) {
-                return {
-                  ...msg,
-                  content: "", // Remove status message text, keep tool invocations
-                };
+            if (msg.role === "assistant") {
+              // Handle string content (status messages)
+              if (typeof msg.content === "string" && isStatusMessage(msg.content)) {
+                // String status messages have no tool calls - filter them out
+                return null;
+              }
+              
+              // Handle array content (may contain both text and tool calls)
+              if (Array.isArray(msg.content)) {
+                const textItems = msg.content.filter((item: any) => item.type === "text");
+                const toolCallItems = msg.content.filter((item: any) => item.type === "tool-call");
+                const hasStatusMessage = textItems.some((item: any) => 
+                  typeof item.text === "string" && isStatusMessage(item.text)
+                );
+                
+                // If it's a status message with tool calls, remove the text but keep tool calls
+                if (hasStatusMessage && toolCallItems.length > 0) {
+                  return {
+                    ...msg,
+                    content: toolCallItems, // Keep only tool calls, remove text
+                  };
+                }
+                
+                // If it's a status message without tool calls, filter it out
+                if (hasStatusMessage && toolCallItems.length === 0) {
+                  return null;
+                }
               }
             }
             return msg;
-          });
+          }).filter((msg) => msg !== null);
           
           await saveChat({
             id,
