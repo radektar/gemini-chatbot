@@ -1,6 +1,6 @@
 import { Metadata } from "next";
-import { Toaster } from "sonner";
 import { Space_Grotesk, DM_Sans } from "next/font/google";
+import { Toaster } from "sonner";
 
 import { Navbar } from "@/components/custom/navbar";
 import { ThemeProvider } from "@/components/custom/theme-provider";

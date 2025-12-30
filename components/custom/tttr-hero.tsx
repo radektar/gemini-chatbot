@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
-import { motion } from "framer-motion";
 import { Attachment, ChatRequestOptions, CreateMessage, Message } from "ai";
+import { motion } from "framer-motion";
+import Image from "next/image";
+import React from "react";
+
 import { MultimodalInput } from "./multimodal-input";
 import { QuickActions } from "./quick-actions";
-import Image from "next/image";
 
 /**
  * TTTR Hero Component
