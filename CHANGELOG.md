@@ -5,6 +5,94 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2024-12-30
+
+### Changed
+- **Phase 07 - Conversation View Styling**: Adapted conversation view to match TTTR design system
+  - **Chat Layout**: Increased desktop chat width from 500px to 800px for better readability
+    - Chat container now uses `max-w-[900px]` with centered layout
+    - Messages container uses `max-w-[800px]` for optimal content width
+  - **Message Alignment**: Implemented proper message alignment based on role
+    - Assistant messages aligned to left (`self-start`) with light surface background bubbles
+    - User messages aligned to right (`self-end flex-row-reverse`) with subtle purple background
+    - Visual distinction between user and assistant messages using TTTR color tokens
+  - **Typography & Colors**: Applied TTTR design tokens throughout conversation components
+    - Message content: `text-tttr-text-paragraph` with `font-secondary` and `leading-[1.7]`
+    - Captions and status text: `text-tttr-text-caption`
+    - Icons: `text-tttr-purple` with `border-tttr-interface-divider`
+    - Assistant bubbles: `bg-tttr-surface-light` with `rounded-tttr-12`
+    - User bubbles: `bg-tttr-purple/5` with `rounded-tttr-12`
+  - **Input Field**: Enhanced textarea visibility on beige background
+    - Added `border border-tttr-interface-divider` and `shadow-sm` for better contrast
+  - **Scrolling**: Fixed scrolling functionality and hidden scrollbar
+    - Changed `overflow-y-scroll` to `overflow-y-auto` for proper scroll behavior
+    - Added `scrollbar-hide` utility class to hide scrollbar while maintaining scroll functionality
+    - Fixed container height with `flex-1` for proper flex layout
+  - **Navigation**: Made "Impact Chat" logo clickable link to homepage
+    - Added Next.js `Link` component wrapping the logo text
+    - Maintains visual styling while providing navigation functionality
+  - **Component Updates**: Applied TTTR styling to all conversation-related components
+    - `components/custom/message.tsx`: Message bubbles, alignment, typography
+    - `components/custom/typing-indicator.tsx`: Indicator styling and alignment
+    - `components/custom/feedback-buttons.tsx`: Button colors and text styling
+    - `components/custom/clarification-suggestions.tsx`: Suggestion buttons styling
+    - `components/custom/plan-action-buttons.tsx`: Action buttons and status text
+    - `components/custom/multimodal-input.tsx`: Input field visibility improvements
+    - `components/custom/navbar.tsx`: Clickable logo link
+    - `components/custom/chat.tsx`: Container layout and scrolling fixes
+
+### Added
+- **CSS Utilities**: Added `scrollbar-hide` utility class to `app/globals.css`
+  - Cross-browser support: `-ms-overflow-style: none` (IE/Edge), `scrollbar-width: none` (Firefox), `::-webkit-scrollbar { display: none }` (Chrome/Safari)
+  - Maintains scroll functionality while hiding visual scrollbar
+
+### Notes
+- Conversation view now fully matches homepage (TTTRHero) visual style
+- Improved desktop experience with wider chat area and proper message alignment
+- All conversation components use consistent TTTR design tokens for visual harmony
+
+---
+
+## [0.3.2] - 2024-12-30
+
+### Added
+- **Phase 07 - UI Branding**: Implementation of TTTR design system with Figma design tokens
+  - **Design Token Extraction**: Extracted 50+ design tokens from Figma file via Figma Desktop MCP
+    - Color palette: Brand Primary (7 colors), Brand Neutral (7 colors), Brand Extended (8 colors), Semantic (1 color), Text (5 colors), Interface (4 colors), Button (8 colors), Surface (6 colors)
+    - Typography: Space Grotesk (primary) and DM Sans (secondary) fonts via `next/font/google`
+    - Spacing scale: 12 values (4px to 96px)
+    - Radius scale: 6 values (4px to 24px)
+  - **CSS Variables**: Added comprehensive design token variables to `app/globals.css`
+    - All colors, spacing, radius, and fonts defined as CSS variables
+    - Organized by category for maintainability
+  - **Tailwind Integration**: Extended Tailwind config with TTTR design system
+    - Color palette accessible via `bg-tttr-*`, `text-tttr-*` classes
+    - Spacing scale via `tttr-*` classes
+    - Radius scale via `rounded-tttr-*` classes
+    - Font families via `font-primary` and `font-secondary` classes
+  - **Font Configuration**: Implemented Space Grotesk and DM Sans fonts
+    - Configured via `next/font/google` for optimal performance
+    - Font variables applied to HTML element in `app/layout.tsx`
+  - **Testing**: Added automated tests and verification scripts
+    - `tests/design-tokens.test.ts`: Automated tests for CSS variables, Tailwind config, and font configuration
+    - `scripts/test-ui-branding.ts`: Visual verification script for design token implementation
+  - **Documentation**: Created `docs/PH07_UI_BRANDING.md`
+    - Complete design token reference
+    - Usage examples and testing checklist
+
+### Changed
+- **app/globals.css**: Added TTTR design system CSS variables (50+ variables)
+- **tailwind.config.ts**: Extended theme with TTTR colors, spacing, radius, and fonts
+- **app/layout.tsx**: Added Space Grotesk and DM Sans font imports and configuration
+
+### Notes
+- Design tokens extracted directly from Figma file `2Voao3uykigSi6csJLZnww` using Figma Desktop MCP
+- All tokens are defined as CSS variables for consistency and easy maintenance
+- Tailwind integration allows easy usage via utility classes throughout the application
+- Fonts are loaded via `next/font/google` for optimal performance and caching
+
+---
+
 ## [0.3.1] - 2025-12-30
 
 ### Changed

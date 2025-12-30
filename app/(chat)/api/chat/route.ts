@@ -491,7 +491,7 @@ export async function POST(request: Request) {
     - ALWAYS synthesize tool results into natural, conversational Polish language
     - Present information in a clear, organized manner (use bullet points, headings when appropriate)
     - If you find multiple items, summarize the key insights and list only the most relevant ones
-    - Act like Perplexity AI - process the data and present conclusions, not raw data
+    - Process the data and present conclusions, not raw data
     
     NO STATUS MESSAGES - CRITICAL RULE (MANDATORY - REPEATED):
     - DO NOT generate messages about what you are doing or planning to do

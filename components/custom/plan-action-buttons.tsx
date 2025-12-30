@@ -93,7 +93,7 @@ export function PlanActionButtons({
 
   if (state === "executing" || state === "improving") {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+      <div className="flex items-center gap-2 text-sm text-tttr-text-caption font-secondary mt-2">
         <span>
           {state === "executing" ? "Wykonywanie planu..." : "Poprawianie planu..."}
         </span>
@@ -109,7 +109,7 @@ export function PlanActionButtons({
           size="sm"
           onClick={handleExecutePlan}
           disabled={state !== "idle"}
-          className="h-8 px-3"
+          className="h-8 px-3 bg-tttr-purple hover:bg-tttr-purple-hover text-white font-primary rounded-tttr-8"
         >
           <Play className="h-4 w-4 mr-1" />
           Wykonaj plan
@@ -119,7 +119,7 @@ export function PlanActionButtons({
           size="sm"
           onClick={handleImprovePlan}
           disabled={state !== "idle"}
-          className="h-8 px-3"
+          className="h-8 px-3 bg-tttr-beige-mid hover:bg-tttr-beige text-tttr-text-paragraph border-0 font-primary rounded-tttr-8"
         >
           <Edit className="h-4 w-4 mr-1" />
           Popraw plan

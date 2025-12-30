@@ -75,8 +75,8 @@ export function FeedbackButtons({
 
   if (state === "submitted") {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
-        <Check className="h-4 w-4 text-green-600" />
+      <div className="flex items-center gap-2 text-sm text-tttr-green-light font-secondary mt-2">
+        <Check className="h-4 w-4 text-tttr-green-light" />
         <span>Dziękujemy za opinię!</span>
       </div>
     );
@@ -92,7 +92,7 @@ export function FeedbackButtons({
           disabled={state === "submitting"}
           className={`h-8 px-2 ${state === "submitting" && rating === 1 ? "opacity-50 cursor-wait" : ""}`}
         >
-          <ThumbsUp className="h-4 w-4" />
+          <ThumbsUp className="h-4 w-4 text-tttr-interface-icon" />
         </Button>
         <Button
           variant="ghost"
@@ -101,10 +101,10 @@ export function FeedbackButtons({
           disabled={state === "submitting"}
           className={`h-8 px-2 ${state === "submitting" && rating === -1 ? "opacity-50 cursor-wait" : ""}`}
         >
-          <ThumbsDown className="h-4 w-4" />
+          <ThumbsDown className="h-4 w-4 text-tttr-interface-icon" />
         </Button>
         {state === "submitting" && (
-          <span className="text-xs text-muted-foreground ml-2">Zapisywanie...</span>
+          <span className="text-xs text-tttr-text-caption font-secondary ml-2">Zapisywanie...</span>
         )}
       </div>
       {showComment && rating === -1 && state === "idle" && (
@@ -113,7 +113,7 @@ export function FeedbackButtons({
             placeholder="Co możemy poprawić? (opcjonalnie)"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            className="min-h-[80px] text-sm"
+            className="min-h-[80px] text-sm font-secondary text-tttr-text-paragraph bg-tttr-white border-none rounded-lg"
           />
           <div className="flex gap-2">
             <Button

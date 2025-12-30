@@ -1,7 +1,6 @@
 "use client";
 
 import { Attachment, ChatRequestOptions, CreateMessage, Message } from "ai";
-import { motion } from "framer-motion";
 import React, {
   useRef,
   useEffect,
@@ -18,19 +17,6 @@ import { PreviewAttachment } from "./preview-attachment";
 import useWindowSize from "./use-window-size";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
-
-const suggestedActions = [
-  {
-    title: "Pokaż moje tablice",
-    label: "w Monday.com",
-    action: "Pokaż moje tablice w Monday.com",
-  },
-  {
-    title: "Szukaj w historii Slack",
-    label: "o projekcie X",
-    action: "Szukaj w historii Slack o projekcie X",
-  },
-];
 
 export function MultimodalInput({
   input,
@@ -72,8 +58,8 @@ export function MultimodalInput({
 
   const adjustHeight = () => {
     if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight + 0}px`;
+      // For single-line input, keep fixed height
+      textareaRef.current.style.height = "64px";
     }
   };
 
@@ -153,38 +139,6 @@ export function MultimodalInput({
 
   return (
     <div className="relative w-full flex flex-col gap-4">
-      {messages.length === 0 &&
-        attachments.length === 0 &&
-        uploadQueue.length === 0 && (
-          <div className="grid sm:grid-cols-2 gap-4 w-full md:px-0 mx-auto md:max-w-[500px]">
-            {suggestedActions.map((suggestedAction, index) => (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                transition={{ delay: 0.05 * index }}
-                key={index}
-                className={index > 1 ? "hidden sm:block" : "block"}
-              >
-                <button
-                  onClick={async () => {
-                    append({
-                      role: "user",
-                      content: suggestedAction.action,
-                    });
-                  }}
-                  className="border-none bg-muted/50 w-full text-left border border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-300 rounded-lg p-3 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex flex-col"
-                >
-                  <span className="font-medium">{suggestedAction.title}</span>
-                  <span className="text-zinc-500 dark:text-zinc-400">
-                    {suggestedAction.label}
-                  </span>
-                </button>
-              </motion.div>
-            ))}
-          </div>
-        )}
-
       <input
         type="file"
         className="fixed -top-4 -left-4 size-0.5 opacity-0 pointer-events-none"
@@ -216,11 +170,11 @@ export function MultimodalInput({
 
       <Textarea
         ref={textareaRef}
-        placeholder="Send a message..."
+        placeholder="Find me a project, ngo, tech..."
         value={input}
         onChange={handleInput}
-        className="min-h-[24px] overflow-hidden resize-none rounded-lg text-base bg-muted border-none"
-        rows={3}
+        className="min-h-[64px] max-h-[64px] overflow-hidden resize-none rounded-lg text-lg px-4 py-4 bg-tttr-white border border-tttr-interface-divider shadow-sm text-tttr-text-paragraph"
+        rows={1}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) {
             event.preventDefault();
@@ -236,7 +190,7 @@ export function MultimodalInput({
 
       {isLoading ? (
         <Button
-          className="rounded-full p-1.5 h-fit absolute bottom-2 right-2 m-0.5 text-white"
+          className="rounded-full p-1.5 h-fit absolute top-1/2 -translate-y-1/2 right-2 text-white"
           onClick={(event) => {
             event.preventDefault();
             stop();
@@ -246,7 +200,7 @@ export function MultimodalInput({
         </Button>
       ) : (
         <Button
-          className="rounded-full p-1.5 h-fit absolute bottom-2 right-2 m-0.5 text-white"
+          className="rounded-full p-1.5 h-fit absolute top-1/2 -translate-y-1/2 right-2 text-white"
           onClick={(event) => {
             event.preventDefault();
             submitForm();
@@ -258,7 +212,7 @@ export function MultimodalInput({
       )}
 
       <Button
-        className="rounded-full p-1.5 h-fit absolute bottom-2 right-10 m-0.5 dark:border-zinc-700"
+        className="rounded-full p-1.5 h-fit absolute top-1/2 -translate-y-1/2 right-10 dark:border-zinc-700"
         onClick={(event) => {
           event.preventDefault();
           fileInputRef.current?.click();

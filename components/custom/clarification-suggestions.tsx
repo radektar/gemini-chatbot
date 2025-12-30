@@ -88,7 +88,7 @@ export function ClarificationSuggestions({
   
   return (
     <div className="flex flex-col gap-2 mt-3">
-      <p className="text-sm text-muted-foreground">Możesz wybrać:</p>
+      <p className="text-sm text-tttr-text-caption font-secondary">Możesz wybrać:</p>
       <div className="flex flex-wrap gap-2">
         {suggestions.map((suggestion, index) => (
           <Button
@@ -96,7 +96,7 @@ export function ClarificationSuggestions({
             variant="secondary"
             size="sm"
             onClick={() => handleSuggestionClick(suggestion)}
-            className="text-sm"
+            className="text-sm font-secondary bg-tttr-beige-mid hover:bg-tttr-beige text-tttr-text-paragraph border-0 rounded-tttr-8"
           >
             {suggestion}
           </Button>

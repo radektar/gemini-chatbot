@@ -76,24 +76,24 @@ export const Message = ({
   
   return (
     <motion.div
-      className={`flex flex-row gap-4 px-4 w-full md:w-[500px] md:px-0 first-of-type:pt-20`}
+      className={`flex flex-row gap-4 px-4 w-full md:max-w-[800px] md:px-0 first-of-type:pt-20 ${role === "user" ? "self-end flex-row-reverse" : "self-start"}`}
       initial={{ y: 5, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
     >
-      <div className="size-[24px] border rounded-sm p-1 flex flex-col justify-center items-center shrink-0 text-zinc-500">
+      <div className="size-[24px] border border-tttr-interface-divider rounded-tttr-8 p-1 flex flex-col justify-center items-center shrink-0 text-tttr-purple">
         {role === "assistant" ? <BotIcon /> : <UserIcon />}
       </div>
 
       <div className="flex flex-col gap-2 w-full">
         {content && typeof content === "string" && !shouldHideContent && (
-          <div className="text-zinc-800 dark:text-zinc-300 flex flex-col gap-4">
+          <div className={`text-tttr-text-paragraph font-secondary leading-[1.7] flex flex-col gap-4 ${role === "assistant" ? "bg-tttr-surface-light rounded-tttr-12 p-4" : "bg-tttr-purple/5 rounded-tttr-12 p-4"}`}>
             <Streamdown>{content}</Streamdown>
           </div>
         )}
         
         {/* Status messages are hidden - typing indicator will show instead */}
         {shouldHideContent && (
-          <div className="text-sm text-muted-foreground italic opacity-50">
+          <div className="text-sm text-tttr-text-caption italic">
             System pracuje...
           </div>
         )}

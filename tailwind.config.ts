@@ -10,14 +10,39 @@ const config: Config = {
   ],
   theme: {
     fontFamily: {
-      sans: ["geist"],
-      mono: ["geist-mono"],
+      sans: ["var(--tttr-font-primary)", "geist", "sans-serif"],
+      mono: ["geist-mono", "monospace"],
+      // TTTR Design System Fonts (from Figma)
+      primary: ["var(--tttr-font-primary)", "sans-serif"],
+      secondary: ["var(--tttr-font-secondary)", "sans-serif"],
     },
     extend: {
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        // TTTR Design System Radius (from Figma)
+        "tttr-4": "var(--tttr-radius-4)",
+        "tttr-8": "var(--tttr-radius-8)",
+        "tttr-12": "var(--tttr-radius-12)",
+        "tttr-16": "var(--tttr-radius-16)",
+        "tttr-20": "var(--tttr-radius-20)",
+        "tttr-24": "var(--tttr-radius-24)",
+      },
+      spacing: {
+        // TTTR Design System Spacing (from Figma)
+        "tttr-4": "var(--tttr-spacing-4)",
+        "tttr-8": "var(--tttr-spacing-8)",
+        "tttr-12": "var(--tttr-spacing-12)",
+        "tttr-16": "var(--tttr-spacing-16)",
+        "tttr-20": "var(--tttr-spacing-20)",
+        "tttr-24": "var(--tttr-spacing-24)",
+        "tttr-32": "var(--tttr-spacing-32)",
+        "tttr-40": "var(--tttr-spacing-40)",
+        "tttr-48": "var(--tttr-spacing-48)",
+        "tttr-64": "var(--tttr-spacing-64)",
+        "tttr-80": "var(--tttr-spacing-80)",
+        "tttr-96": "var(--tttr-spacing-96)",
       },
       colors: {
         background: "hsl(var(--background))",
@@ -59,6 +84,69 @@ const config: Config = {
           "3": "hsl(var(--chart-3))",
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
+        },
+        // TTTR Design System Colors (extracted from Figma via MCP)
+        tttr: {
+          // Brand Primary
+          "deep-dark": "var(--tttr-deep-dark)",
+          purple: {
+            DEFAULT: "var(--tttr-purple-primary)",
+            hover: "var(--tttr-purple-hover)",
+            dark: "var(--tttr-purple-dark)",
+            light: "var(--tttr-purple-light)",
+            accent: "var(--tttr-purple-accent)",
+            darkest: "var(--tttr-purple-darkest)",
+          },
+          // Brand Neutral
+          beige: {
+            DEFAULT: "var(--tttr-beige)",
+            light: "var(--tttr-beige-light)",
+            mid: "var(--tttr-beige-mid)",
+          },
+          white: "var(--tttr-white)",
+          "cloud-white": "var(--tttr-cloud-white)",
+          lilac: "var(--tttr-lilac)",
+          "blue-gray": "var(--tttr-blue-gray)",
+          // Brand Extended
+          blue: {
+            DEFAULT: "var(--tttr-blue-primary)",
+            dark: "var(--tttr-blue-dark)",
+            light: "var(--tttr-blue-light)",
+          },
+          green: {
+            dark: "var(--tttr-green-dark)",
+            light: "var(--tttr-green-light)",
+          },
+          coral: "var(--tttr-coral)",
+          rose: "var(--tttr-rose)",
+          mango: "var(--tttr-mango)",
+          // Semantic
+          error: "var(--tttr-error)",
+          // Text
+          text: {
+            heading: "var(--tttr-text-heading)",
+            paragraph: "var(--tttr-text-paragraph)",
+            caption: "var(--tttr-text-caption)",
+            link: "var(--tttr-text-link)",
+            inactive: "var(--tttr-text-inactive)",
+          },
+          // Surface/Elevation
+          surface: {
+            light: "var(--tttr-surface-light)",
+            dark: "var(--tttr-surface-dark)",
+            "dark-hover": "var(--tttr-surface-dark-hover)",
+            cta: "var(--tttr-surface-cta)",
+          },
+          // Interface
+          interface: {
+            icon: "var(--tttr-interface-icon)",
+            divider: "var(--tttr-interface-divider)",
+          },
+          // Progress
+          progress: {
+            idle: "var(--tttr-progress-idle)",
+            active: "var(--tttr-progress-active)",
+          },
         },
       },
     },

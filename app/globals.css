@@ -6,6 +6,99 @@
     --foreground-rgb: 0, 0, 0;
     --background-start-rgb: 214, 219, 220;
     --background-end-rgb: 255, 255, 255;
+    
+    /* ============================================
+     * TTTR Design System - Phase 07 UI Branding
+     * Extracted from Figma via MCP on 2024-12-30
+     * ============================================ */
+    
+    /* Brand Primary */
+    --tttr-deep-dark: #050024;
+    --tttr-purple-primary: #6c00f0;   /* c-/brand/primary/500-main */
+    --tttr-purple-hover: #4900a8;     /* c-/brand/primary/400 */
+    --tttr-purple-dark: #3e008f;      /* c-/brand/primary/300 */
+    --tttr-purple-light: #aa80ff;     /* c-/brand/primary/600 */
+    --tttr-purple-accent: #822fff;    /* c-/brand/primary/550 */
+    --tttr-purple-darkest: #13002b;   /* c-/brand/primary/0 */
+    
+    /* Brand Neutral */
+    --tttr-beige: #e0d9ce;            /* c-/brand/neutral/beige */
+    --tttr-beige-light: #f6f3ee;      /* c-/brand/neutral/beige-30 */
+    --tttr-beige-mid: #eeece5;        /* c-/brand/neutral/beige-50 */
+    --tttr-white: #ffffff;            /* c-/brand/neutral/white */
+    --tttr-cloud-white: #f5f4f7;      /* c-/brand/neutral/cloud white */
+    --tttr-lilac: #ebe8f0;            /* c-/brand/neutral/lilac mist */
+    --tttr-blue-gray: #3d376c;        /* c-/brand/neutral/blue gray */
+    
+    /* Brand Extended */
+    --tttr-blue-primary: #003eee;     /* c-/brand/extended/digital cobalt */
+    --tttr-blue-dark: #00299b;        /* c-/brand/extended/dark blue */
+    --tttr-blue-light: #85a5ff;       /* c-/brand/extended/periwinkle pop */
+    --tttr-green-dark: #055740;       /* c-/brand/extended/evergreen forest */
+    --tttr-green-light: #56b760;      /* c-/brand/extended/fresh mint */
+    --tttr-coral: #fa4e4b;            /* c-/brand/extended/bold coral */
+    --tttr-rose: #f97999;             /* c-/brand/extended/rose sorbet */
+    --tttr-mango: #ffbf1a;            /* c-/brand/extended/golden mango */
+    
+    /* Semantic */
+    --tttr-error: #df4848;            /* c-/semantic/error/600 */
+    
+    /* Text Colors */
+    --tttr-text-heading: #13002b;     /* txt/heading/default */
+    --tttr-text-paragraph: #050024;   /* txt/paragraph */
+    --tttr-text-caption: #0500248c;   /* txt/caption/default - 55% opacity */
+    --tttr-text-link: #3e008f;        /* txt/text-link */
+    --tttr-text-inactive: #3d376c;    /* txt/interface-inactive */
+    
+    /* Interface Colors */
+    --tttr-interface-icon: #2c0066;   /* icon/color/idle */
+    --tttr-interface-divider: #c5b2ff99; /* interface/divider/color-1 */
+    --tttr-progress-idle: #e0d9ce;    /* interface/progress-bar/idle */
+    --tttr-progress-active: #822fff;  /* interface/progress-bar/active */
+    
+    /* Button Colors */
+    --tttr-btn-purple-idle: #6c00f0;
+    --tttr-btn-purple-hover: #4900a8;
+    --tttr-btn-beige-idle: #eeece5;
+    --tttr-btn-beige-hover: #e0d9ce;
+    --tttr-btn-blue-idle: #003eee;
+    --tttr-btn-blue-hover: #00299b;
+    --tttr-btn-white-idle: #ffffff;
+    --tttr-btn-white-hover: #f6f3ee;
+    
+    /* Elevation/Surface */
+    --tttr-surface-light: #fffefa;
+    --tttr-surface-dark: #f6f3ee;
+    --tttr-surface-dark-hover: #e9e4dd;
+    --tttr-surface-cta: #ebe8f0;
+    --tttr-surface-testimonial-purple: #3e008f;
+    --tttr-surface-testimonial-blue: #ebe8f0;
+    
+    /* Spacing (from Figma) */
+    --tttr-spacing-4: 4px;
+    --tttr-spacing-8: 8px;
+    --tttr-spacing-12: 12px;
+    --tttr-spacing-16: 16px;
+    --tttr-spacing-20: 20px;
+    --tttr-spacing-24: 24px;
+    --tttr-spacing-32: 32px;
+    --tttr-spacing-40: 40px;
+    --tttr-spacing-48: 48px;
+    --tttr-spacing-64: 64px;
+    --tttr-spacing-80: 80px;
+    --tttr-spacing-96: 96px;
+    
+    /* Radius (from Figma) */
+    --tttr-radius-4: 4px;
+    --tttr-radius-8: 8px;
+    --tttr-radius-12: 12px;
+    --tttr-radius-16: 16px;
+    --tttr-radius-20: 20px;
+    --tttr-radius-24: 24px;
+    
+    /* Fonts (from Figma) */
+    --tttr-font-primary: 'Space Grotesk', sans-serif;
+    --tttr-font-secondary: 'DM Sans', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,6 +112,15 @@
 @layer utilities {
     .text-balance {
         text-wrap: balance;
+    }
+    
+    /* Hide scrollbar but keep scroll functionality */
+    .scrollbar-hide {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;  /* Chrome, Safari and Opera */
     }
 }
 

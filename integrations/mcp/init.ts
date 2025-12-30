@@ -4,7 +4,6 @@
 
 import { mcpManager } from "./client";
 import { getMondayMCPConfig } from "./monday";
-import { getPerplexityMCPConfig } from "./perplexity";
 import { filterReadOnlyTools, isReadOnlyTool } from "@/lib/monday-readonly";
 import { processMondayPayload, shouldTriggerNarrowWarning } from "@/lib/monday-payload-control";
 
@@ -25,19 +24,6 @@ export async function initializeMCP() {
       );
     } else {
       console.warn("MONDAY_API_TOKEN not set, skipping Monday.com MCP initialization");
-    }
-
-    // Initialize Perplexity MCP server
-    if (process.env.PERPLEXITY_API_KEY) {
-      try {
-        await mcpManager.connect(getPerplexityMCPConfig());
-        console.log("Perplexity MCP server connected");
-      } catch (error) {
-        console.error("Failed to initialize Perplexity MCP server:", error);
-        // Don't throw - Perplexity is optional
-      }
-    } else {
-      console.warn("PERPLEXITY_API_KEY not set, skipping Perplexity MCP initialization");
     }
 
     mcpInitialized = true;
@@ -65,39 +51,6 @@ export async function getMondayMCPTools() {
   } catch (error) {
     console.error("Failed to get Monday.com MCP tools:", error);
     return [];
-  }
-}
-
-export async function getPerplexityMCPTools() {
-  try {
-    await initializeMCP();
-    const toolsResponse = await mcpManager.listTools("perplexity");
-    // MCP listTools returns { tools: [...] }
-    const allTools = toolsResponse.tools || [];
-    
-    console.log(
-      `[Perplexity MCP] Loaded ${allTools.length} tools`
-    );
-    
-    return allTools;
-  } catch (error) {
-    console.error("Failed to get Perplexity MCP tools:", error);
-    return [];
-  }
-}
-
-export async function callPerplexityMCPTool(
-  toolName: string,
-  args: Record<string, any>
-): Promise<any> {
-  try {
-    await initializeMCP();
-    const result = await mcpManager.callTool("perplexity", toolName, args);
-    console.log(`[Perplexity MCP] Tool ${toolName} executed successfully`);
-    return result;
-  } catch (error) {
-    console.error(`[Perplexity MCP] Failed to call tool ${toolName}:`, error);
-    throw error;
   }
 }
 
