@@ -1,12 +1,13 @@
 ---
-description: "Gdy user pyta o kolejny krok, zawsze odwołuj się do PROJECT_SPEC/BACKLOG/CHANGELOG."
+description: "When user asks about next step, always reference PROJECT_SPEC/BACKLOG/CHANGELOG."
 alwaysApply: true
 ---
 
-Jeśli użytkownik pyta o **kolejny krok / co dalej / next step / następny krok / co teraz**:
+# Next Step References Documentation
 
-- Najpierw sprawdź i oprzyj odpowiedź o: `@docs/PROJECT_SPEC.md`, `@docs/BACKLOG.md`, `@CHANGELOG.md`.
-- Zaproponuj konkretny następny krok jako **zadanie z backlogu** (ID w stylu `PHxx-...`), zgodne z zależnościami i entry/exit criteria faz.
-- Wspomnij, z jaką **wersją** z `@CHANGELOG.md` jest to powiązane (np. “zgodne z planem od [0.1.2]” lub “następny krok po [0.1.2]”).
-- Jeśli dokumenty nie dają jednoznacznej odpowiedzi, zadaj 1–3 pytania doprecyzowujące zamiast zgadywać.
+If the user asks about **next step / what's next / next step / what now**:
 
+- First check and base your answer on: `@docs/PROJECT_SPEC.md`, `@docs/BACKLOG.md`, `@CHANGELOG.md`.
+- Propose a specific next step as a **backlog task** (ID in format `PHxx-...`), consistent with dependencies and entry/exit criteria of phases.
+- Mention which **version** from `@CHANGELOG.md` this is related to (e.g., "consistent with plan from [0.1.2]" or "next step after [0.1.2]").
+- If documents don't provide a clear answer, ask 1–3 clarifying questions instead of guessing.

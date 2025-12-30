@@ -1,0 +1,3 @@
+# Archive folder - wyłączony z searchowania aby zmniejszyć context load
+archive/
+

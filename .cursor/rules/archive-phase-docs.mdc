@@ -1,0 +1,76 @@
+---
+description: "After phase completion (after commit) automatically move documents and tests to archive/ folder."
+alwaysApply: true
+---
+
+# Archiving documents after phase completion
+
+When a phase is **completed** (after commit with phase information in CHANGELOG.md or marked as "✅ Completed" in BACKLOG.md):
+
+## Automatic document and test archiving
+
+1. **Identify completed phase**:
+   - Check CHANGELOG.md - if commit contains phase completion information (e.g., "Phase 06 - Context Budget Hardening")
+   - Check BACKLOG.md - if phase has status "✅ Completed"
+   - Check branch name - if it follows format `phase/<NN>-<slug>`
+
+2. **Create folder structure in archive/**:
+   ```bash
+   mkdir -p archive/docs/phase-<NN>-<slug>/
+   mkdir -p archive/scripts/phase-<NN>-<slug>/
+   mkdir -p archive/tests/  # if manual tests exist
+   ```
+
+3. **Move documents** from `docs/` to `archive/docs/phase-<NN>-<slug>/`:
+   - All files starting with `PH<NN>_*` (e.g., `PH06_*`, `PH04_*`)
+   - Phase-related documents (e.g., `*_TEST_RESULTS.md`, `*_MANUAL_TEST*.md`, `*_TESTING_GUIDE.md`)
+   - Security/test documents related to phase (e.g., `MONDAY_SECURITY_TEST_RESULTS.md` for phase 03)
+   - Setup/configuration documents related to phase (e.g., `MONDAY_MCP_SETUP.md` for phase 03)
+
+4. **Move test scripts** from `scripts/` to `archive/scripts/phase-<NN>-<slug>/`:
+   - Scripts starting with `test-*` related to phase
+   - Scripts starting with `verify-ph<NN>-*`
+   - Scripts starting with `research-*` related to phase
+
+5. **Move manual tests** from `tests/` to `archive/tests/`:
+   - Only manual tests (e.g., `manual-scenarios-*.test.ts`)
+   - **DO NOT move** automated tests - they remain in `tests/` as part of active code
+
+6. **Update .cursorignore**:
+   - Ensure `archive/` is in `.cursorignore` (add if missing)
+
+## Example for Phase 06
+
+After completing Phase 06 (Context Budget Hardening):
+
+```bash
+# Create folders
+mkdir -p archive/docs/phase-06-context/
+mkdir -p archive/scripts/phase-06/
+
+# Move documents
+mv docs/PH06_* archive/docs/phase-06-context/
+
+# Move scripts
+mv scripts/test-context-* archive/scripts/phase-06/
+mv scripts/verify-ph06-* archive/scripts/phase-06/
+
+# Move manual tests (if any)
+mv tests/manual-scenarios-3-5-6.test.ts archive/tests/  # only if related to phase 06
+```
+
+## Notes
+
+- **Automated tests remain**: All tests in `tests/` remain in place - they are part of active code and can be used in CI/CD
+- **Active documentation remains**: `PROJECT_SPEC.md`, `BACKLOG.md`, `USE_CASES.md` remain in `docs/`
+- **Archive in git**: `archive/` folder remains in git repository (project history)
+- **Excluded from search**: `archive/` folder is excluded from Cursor search (`.cursorignore`)
+
+## Detecting phase completion
+
+A phase is considered completed when:
+- CHANGELOG.md contains commit with phase completion information (e.g., "Phase 06 - Context Budget Hardening")
+- BACKLOG.md shows phase status as "✅ Completed"
+- Commit message contains phase completion information
+
+After detecting phase completion, automatically perform archiving according to the steps above.

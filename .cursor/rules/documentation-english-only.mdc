@@ -1,0 +1,58 @@
+---
+description: "All documentation must be written in English (markdown files, changelog, cursor rules, etc.)."
+alwaysApply: true
+---
+
+# Documentation English Only
+
+All documentation in this project must be written in **English only**. This includes:
+
+## Files that must be in English
+
+- **Markdown documentation files** (`docs/*.md`):
+  - `PROJECT_SPEC.md`
+  - `BACKLOG.md`
+  - `USE_CASES.md`
+  - All phase documentation files (`PH*.md`)
+  - All test documentation files (`*_TEST*.md`)
+
+- **Changelog** (`CHANGELOG.md`):
+  - All version entries
+  - All change descriptions
+  - All commit messages referenced
+
+- **Cursor rules** (`.cursor/rules/*.mdc`):
+  - All rule descriptions
+  - All rule content
+  - All comments and examples
+
+- **README files** (`README.md`, `archive/README.md`):
+  - Project descriptions
+  - Setup instructions
+  - Usage examples
+
+- **Code comments** (when documenting public APIs or complex logic):
+  - Function documentation
+  - Class documentation
+  - Complex algorithm explanations
+
+## Exceptions
+
+- **User-facing UI text** (Polish is allowed for UI elements visible to end users)
+- **Test data** (test fixtures, sample data)
+- **Internal code comments** (brief inline comments explaining implementation details)
+
+## Enforcement
+
+When creating or updating any documentation:
+1. Write all content in English
+2. Use proper English grammar and spelling
+3. Follow English documentation conventions
+4. If translating existing Polish documentation, ensure accuracy and clarity
+
+## Rationale
+
+- Consistency across the project
+- Better collaboration with international developers
+- Easier maintenance and updates
+- Standard practice for open-source projects

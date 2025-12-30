@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-12-30
+
+### Changed
+- **Project organization**: Archived completed phase documentation and test scripts to `archive/` folder to reduce context load in Cursor
+  - Moved phase 03, 04, 06, 09 test documentation to `archive/docs/phase-<NN>-<slug>/`
+  - Moved phase test scripts to `archive/scripts/phase-<NN>-<slug>/`
+  - Moved manual tests to `archive/tests/`
+  - Created `archive/README.md` with content description
+  - Added `archive/` to `.cursorignore` to exclude from Cursor search
+
+### Added
+- **Cursor rules**: Added automatic archiving rule for completed phases
+  - `.cursor/rules/archive-phase-docs.mdc`: Automatically moves documents and tests to `archive/` after phase completion
+  - Detects phase completion based on CHANGELOG.md, BACKLOG.md, or branch name
+- **Cursor rules**: Added documentation language requirement rule
+  - `.cursor/rules/documentation-english-only.mdc`: Requires all documentation to be written in English
+  - Applies to markdown files, changelog, cursor rules, README files, and code documentation
+- **Cursor rules**: Translated all Cursor rules to English
+  - `.cursor/rules/phase-branch-per-phase.mdc`: Rule for creating phase branches
+  - `.cursor/rules/next-step-refs-docs.mdc`: Rule for referencing documentation when asked about next steps
+
+### Notes
+- Automated tests remain in `tests/` folder - they are part of active code and can be used in CI/CD
+- Active documentation (`PROJECT_SPEC.md`, `BACKLOG.md`, `USE_CASES.md`) remains in `docs/`
+- `archive/` folder remains in git repository (project history)
+
+---
+
 ## [0.3.0] - 2025-12-29
 
 ### Added
